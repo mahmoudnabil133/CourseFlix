@@ -2,7 +2,7 @@ import { NavLink } from 'react-router'
 import { ROUTE_PATHS } from '../../app/routes/route-paths'
 
 export type SidebarProps = {
-  role: 'student' | 'teacher'
+  role: 'student' | 'teacher' | 'admin'
   userName: string
   activePath: string
   onLogout?: () => void
@@ -38,6 +38,27 @@ const teacherNavItems: NavItem[] = [
   { path: ROUTE_PATHS.TEACHER.ANALYTICS, label: 'مساعد التحليلات', icon: 'insights' },
 ]
 
+// Grows alongside the admin route surface — only nav items whose route
+// actually exists yet, same discipline as the other two lists above.
+const adminNavItems: NavItem[] = [
+  { path: ROUTE_PATHS.ADMIN.DASHBOARD, label: 'الرئيسية', icon: 'home' },
+  { path: ROUTE_PATHS.ADMIN.USERS, label: 'المستخدمون', icon: 'manage_accounts' },
+  { path: ROUTE_PATHS.ADMIN.COURSES, label: 'الدورات', icon: 'menu_book' },
+  { path: ROUTE_PATHS.ADMIN.ORDERS, label: 'الطلبات', icon: 'shopping_cart' },
+  { path: ROUTE_PATHS.ADMIN.QUIZZES, label: 'الاختبارات', icon: 'quiz' },
+  { path: ROUTE_PATHS.ADMIN.DOCUMENTS, label: 'المستندات', icon: 'description' },
+  { path: ROUTE_PATHS.ADMIN.INTERVENTIONS, label: 'تنبيهات المتابعة', icon: 'monitoring' },
+  { path: ROUTE_PATHS.ADMIN.NOTIFICATIONS, label: 'الإشعارات', icon: 'notifications' },
+  { path: ROUTE_PATHS.ADMIN.NOTIFICATIONS_LOG, label: 'سجل الإشعارات', icon: 'history' },
+  { path: ROUTE_PATHS.ADMIN.AGENT_LOGS, label: 'سجل الوكلاء', icon: 'smart_toy' },
+]
+
+const NAV_ITEMS_BY_ROLE: Record<SidebarProps['role'], NavItem[]> = {
+  student: studentNavItems,
+  teacher: teacherNavItems,
+  admin: adminNavItems,
+}
+
 export function Sidebar({
   role,
   userName,
@@ -47,7 +68,7 @@ export function Sidebar({
   onToggle,
   onToggleRail,
 }: SidebarProps) {
-  const navItems = role === 'student' ? studentNavItems : teacherNavItems
+  const navItems = NAV_ITEMS_BY_ROLE[role]
 
   if (!isOpen) return null
 

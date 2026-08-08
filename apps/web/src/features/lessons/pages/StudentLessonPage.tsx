@@ -7,6 +7,7 @@ import { NotFoundState } from '../../../shared/components/NotFoundState'
 import { formatDuration } from '../../../shared/lib/formatters'
 import { LESSON_PROGRESS_STATUS } from '../../../shared/lib/status-labels'
 import { useAuth } from '../../auth/hooks/useAuth'
+import { VideoQaPanel } from '../../video-qa/components/VideoQaPanel'
 import { useLesson } from '../hooks/useLesson'
 import { useProgressHeartbeat } from '../hooks/useProgressHeartbeat'
 import type { LessonCourseOutlineLesson, LessonProgressStatus } from '../types/lesson.types'
@@ -70,6 +71,9 @@ function getIframeEmbedUrl(value: string): string | null {
       embedUrl.searchParams.set('modestbranding', '1')
       embedUrl.searchParams.set('iv_load_policy', '3')
       embedUrl.searchParams.set('playsinline', '1')
+      // Required for the postMessage `seekTo` command the video Q&A
+      // assistant uses to jump to a cited timestamp — see handleSeekTo.
+      embedUrl.searchParams.set('enablejsapi', '1')
       return embedUrl.toString()
     }
 
@@ -91,6 +95,7 @@ export function StudentLessonPage() {
   const viewerRole = user?.role ?? 'student'
   const { data, isLoading, error, refetch } = useLesson(lessonId ?? '', viewerRole)
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  const iframeRef = useRef<HTMLIFrameElement | null>(null)
   const [watchedPercentage, setWatchedPercentage] = useState<number | null>(null)
   const [status, setStatus] = useState<LessonProgressStatus | null>(null)
   const [attendanceAwarded, setAttendanceAwarded] = useState(false)
@@ -98,6 +103,24 @@ export function StudentLessonPage() {
   const iframeEmbedUrl = data ? getIframeEmbedUrl(data.video.url) : null
   const progressDurationSeconds =
     data?.video.durationSeconds ?? (iframeEmbedUrl ? EXTERNAL_VIDEO_FALLBACK_DURATION_SECONDS : null)
+  const isYoutubeEmbed = iframeEmbedUrl?.includes('youtube-nocookie.com') ?? false
+  // Native <video> and YouTube both expose a way to seek programmatically;
+  // Bunny's iframe postMessage protocol isn't wired into this codebase, so
+  // its cited timestamps render as plain text instead of a hacked guess.
+  const canSeekVideo = !iframeEmbedUrl || isYoutubeEmbed
+
+  function handleSeekTo(seconds: number) {
+    if (videoRef.current) {
+      videoRef.current.currentTime = seconds
+      return
+    }
+    if (isYoutubeEmbed) {
+      iframeRef.current?.contentWindow?.postMessage(
+        JSON.stringify({ event: 'command', func: 'seekTo', args: [seconds, true] }),
+        '*',
+      )
+    }
+  }
 
   useProgressHeartbeat({
     lessonId: lessonId ?? '',
@@ -186,6 +209,7 @@ export function StudentLessonPage() {
             ) : iframeEmbedUrl ? (
               <iframe
                 key={data.video.id}
+                ref={iframeRef}
                 src={iframeEmbedUrl}
                 title={data.title}
                 allow="accelerometer; autoplay; encrypted-media; gyroscope; fullscreen"
@@ -262,6 +286,14 @@ export function StudentLessonPage() {
               </div>
               <span className="meta">تُعتبر حاضرًا عند مشاهدة نسبة كافية من الدرس</span>
             </div>
+          )}
+
+          {viewerRole === 'student' && (
+            <VideoQaPanel
+              videoId={data.video.id}
+              canSeek={canSeekVideo}
+              onSeek={handleSeekTo}
+            />
           )}
 
           {nextLesson && (

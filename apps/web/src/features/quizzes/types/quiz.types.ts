@@ -9,6 +9,7 @@ export interface Quiz {
 
 export interface QuizSummary {
   id: string; title: string; courseId: string; sectionId: string | null; lessonId: string | null; questionCount: number;
+  dueAt: string | null;
   submission: { score: number; total: number } | null;
 }
 

@@ -9,4 +9,11 @@ export class UploadDocumentDto {
   mimeType!: string;
   buffer!: Buffer;
   sizeBytes!: number;
+  // Optional finer-grained placement within the course, mirroring
+  // `videos.section_id`/`lesson_id` — lets the AI exam generator scope
+  // "this document only" to a lesson or section instead of the whole
+  // course. Omitted (both undefined) keeps a document course-wide, same
+  // as before these fields existed.
+  sectionId?: string;
+  lessonId?: string;
 }

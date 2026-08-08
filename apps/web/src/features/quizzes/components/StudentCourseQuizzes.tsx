@@ -55,6 +55,7 @@ export function StudentCourseQuizzes({ courseId }: StudentCourseQuizzesProps) {
                 {quiz.submission
                   ? ` - تم الحل: ${quiz.submission.score} / ${quiz.submission.total}`
                   : ' - جاهز للحل'}
+                {quiz.dueAt && ` - آخر موعد: ${new Date(quiz.dueAt).toLocaleDateString('ar-EG')}`}
               </span>
             </span>
             <span className="end">

@@ -60,6 +60,13 @@ export class EnrollmentsService {
     return enrollment;
   }
 
+  async listActiveStudentIds(courseId: string): Promise<string[]> {
+    const enrollments = await this.enrollmentsRepository.find({
+      where: { courseId, status: 'active', deletedAt: IsNull() },
+    });
+    return enrollments.map((enrollment) => enrollment.studentId);
+  }
+
   async countActiveStudentsByCourseIds(courseIds: string[]): Promise<number> {
     if (courseIds.length === 0) {
       return 0;

@@ -1,12 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { RetrievedChunk } from '../../../common/ports/retrieval.port';
 
 @Injectable()
 export class AnswerPolicyService {
   constructor(private readonly configService: ConfigService) {}
 
-  getRelevantChunks(chunks: RetrievedChunk[]): RetrievedChunk[] {
+  // Generic over any chunk with a `score` field so it applies equally to
+  // course-document chunks (Tutor) and video-transcript chunks (Video Q&A).
+  getRelevantChunks<T extends { score: number }>(chunks: T[]): T[] {
     const maxDistance = Number(
       this.configService.get<string>('TUTOR_MAX_DISTANCE') ?? 1.35,
     );

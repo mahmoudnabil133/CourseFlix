@@ -18,6 +18,7 @@ describe('StudentCourseQuizzes', () => {
             sectionId: 'section-1',
             lessonId: 'lesson-1',
             questionCount: 2,
+            dueAt: null,
             submission: null,
           },
         ]),

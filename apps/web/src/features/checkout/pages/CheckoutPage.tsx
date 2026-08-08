@@ -1,4 +1,4 @@
-import { Link, useParams } from 'react-router'
+import { Link, useNavigate, useParams } from 'react-router'
 import { ErrorState } from '../../../shared/components/ErrorState'
 import { LoadingState } from '../../../shared/components/LoadingState'
 import { NotFoundState } from '../../../shared/components/NotFoundState'
@@ -48,8 +48,18 @@ function NoticeCard({ icon, title, message, actionLabel, actionTo }: NoticeCardP
 
 export function CheckoutPage() {
   const { courseId } = useParams<{ courseId: string }>()
-  const { order, isCreating, isConfirming, createError, confirmError, pay, retryCreate } =
-    useCheckout(courseId ?? '')
+  const navigate = useNavigate()
+  const {
+    order,
+    isCreating,
+    isConfirming,
+    isInitiatingPaymob,
+    createError,
+    confirmError,
+    paymobError,
+    payWithPaymob,
+    retryCreate,
+  } = useCheckout(courseId ?? '')
 
   if (isCreating) {
     return <LoadingState variant="text" />
@@ -163,17 +173,32 @@ export function CheckoutPage() {
         </div>
       )}
 
+      {paymobError && (
+        <div className="card section" role="alert" style={{ borderInlineStart: '4px solid var(--error)' }}>
+          <p style={{ color: 'var(--on-error-container)' }}>
+            تعذر الاتصال بمزود الدفع. يرجى المحاولة مرة أخرى.
+          </p>
+        </div>
+      )}
+
       <div className="actions">
-        <button className="btn big" onClick={() => void pay('success')} disabled={isConfirming}>
+        <button
+          className="btn big"
+          onClick={() => void payWithPaymob()}
+          disabled={isInitiatingPaymob || isConfirming}
+        >
           <span className="ms" aria-hidden="true">payments</span>
-          {isConfirming ? 'جاري الدفع...' : declined ? 'إعادة المحاولة' : 'ادفع الآن'}
+          {isInitiatingPaymob ? 'جاري التحويل إلى صفحة الدفع...' : declined ? 'إعادة المحاولة' : 'ادفع الآن'}
         </button>
 
         {/* Test-only trigger for the deterministic adapter's decline path
             (docs/api/sprint3-commerce.md) — there is no real card entry in
             this sprint's checkout, so this is how the retryable-failure
             state gets exercised. */}
-        <button className="btn text" onClick={() => void pay('decline')} disabled={isConfirming}>
+        <button
+          className="btn text"
+          onClick={() => navigate(ROUTE_PATHS.STUDENT.BROWSE)}
+        >
           محاكاة رفض الدفع (تجريبي)
         </button>
       </div>

@@ -43,8 +43,11 @@ export class TeacherController {
   }
 
   @Get('students')
-  getStudents(@CurrentUser() user: AuthenticatedUser) {
-    return this.teacherService.getStudents(user.id);
+  getStudents(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('studentId') studentId?: string,
+  ) {
+    return this.teacherService.getStudents(user.id, studentId);
   }
 
   @Post('courses')

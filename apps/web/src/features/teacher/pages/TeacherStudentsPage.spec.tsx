@@ -12,8 +12,8 @@ describe('TeacherStudentsPage', () => {
     expect(await screen.findByText('طالب مشترك')).toBeInTheDocument()
     expect(screen.getByText('طالب غير مشترك')).toBeInTheDocument()
     expect(screen.getAllByText('٥٠٠ EGP')).toHaveLength(2)
-    expect(screen.getByText('11111111...1111')).toBeInTheDocument()
-    expect(screen.getByText('22222222...2222')).toBeInTheDocument()
+    expect(screen.getByText('11111111-1111-1111-1111-111111111111')).toBeInTheDocument()
+    expect(screen.getByText('22222222-2222-2222-2222-222222222222')).toBeInTheDocument()
     expect(screen.getByText('الميكانيكا الكلاسيكية')).toBeInTheDocument()
     expect(screen.getByText('لا يوجد اشتراك في دوراتك')).toBeInTheDocument()
 

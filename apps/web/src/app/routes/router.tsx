@@ -5,6 +5,7 @@ import { RequireRole } from './RequireRole'
 import { AuthLayout } from '../layouts/AuthLayout'
 import { StudentLayout } from '../layouts/StudentLayout'
 import { TeacherLayout } from '../layouts/TeacherLayout'
+import { AdminLayout } from '../layouts/AdminLayout'
 import { LoadingState } from '../../shared/components/LoadingState'
 import { ErrorState } from '../../shared/components/ErrorState'
 
@@ -85,6 +86,68 @@ const TeacherAnalyticsPage = lazy(() =>
 const CheckoutPage = lazy(() =>
   import('../../features/checkout/pages/CheckoutPage').then((m) => ({
     default: m.CheckoutPage,
+  }))
+)
+const AdminDashboardPage = lazy(() =>
+  import('../../features/admin/pages/AdminDashboardPage').then((m) => ({
+    default: m.AdminDashboardPage,
+  }))
+)
+const AdminUsersPage = lazy(() =>
+  import('../../features/admin/pages/AdminUsersPage').then((m) => ({ default: m.AdminUsersPage }))
+)
+const AdminUserDetailPage = lazy(() =>
+  import('../../features/admin/pages/AdminUserDetailPage').then((m) => ({
+    default: m.AdminUserDetailPage,
+  }))
+)
+const AdminCreateAdminPage = lazy(() =>
+  import('../../features/admin/pages/AdminCreateAdminPage').then((m) => ({
+    default: m.AdminCreateAdminPage,
+  }))
+)
+const AdminCoursesPage = lazy(() =>
+  import('../../features/admin/pages/AdminCoursesPage').then((m) => ({ default: m.AdminCoursesPage }))
+)
+const AdminCourseDetailPage = lazy(() =>
+  import('../../features/admin/pages/AdminCourseDetailPage').then((m) => ({
+    default: m.AdminCourseDetailPage,
+  }))
+)
+const AdminOrdersPage = lazy(() =>
+  import('../../features/admin/pages/AdminOrdersPage').then((m) => ({ default: m.AdminOrdersPage }))
+)
+const AdminOrderDetailPage = lazy(() =>
+  import('../../features/admin/pages/AdminOrderDetailPage').then((m) => ({
+    default: m.AdminOrderDetailPage,
+  }))
+)
+const AdminQuizzesPage = lazy(() =>
+  import('../../features/admin/pages/AdminQuizzesPage').then((m) => ({ default: m.AdminQuizzesPage }))
+)
+const AdminQuizDetailPage = lazy(() =>
+  import('../../features/admin/pages/AdminQuizDetailPage').then((m) => ({
+    default: m.AdminQuizDetailPage,
+  }))
+)
+const AdminDocumentsPage = lazy(() =>
+  import('../../features/admin/pages/AdminDocumentsPage').then((m) => ({
+    default: m.AdminDocumentsPage,
+  }))
+)
+const AdminInterventionsPage = lazy(() =>
+  import('../../features/admin/pages/AdminInterventionsPage').then((m) => ({
+    default: m.AdminInterventionsPage,
+  }))
+)
+const AdminNotificationsLogPage = lazy(() =>
+  import('../../features/admin/pages/AdminNotificationsLogPage').then((m) => ({
+    default: m.AdminNotificationsLogPage,
+  }))
+)
+const AdminAgentLogsPage = lazy(() =>
+  import('../../features/admin/pages/AdminAgentLogsPage').then((m) => ({
+    default: m.AdminAgentLogsPage,
   }))
 )
 
@@ -344,6 +407,144 @@ export const router = createBrowserRouter([
             element: (
               <SuspenseWrapper>
                 <TeacherAnalyticsPage />
+              </SuspenseWrapper>
+            ),
+          },
+        ],
+      },
+    ],
+  },
+
+  /* Admin Routes — gated behind RequireRole("admin"). */
+  {
+    element: <RequireRole role="admin" />,
+    errorElement: <RouteErrorBoundary />,
+    children: [
+      {
+        path: ROUTE_PATHS.ADMIN.ROOT,
+        element: <AdminLayout />,
+        children: [
+          {
+            index: true,
+            element: <Navigate to={ROUTE_PATHS.ADMIN.DASHBOARD} replace />,
+          },
+          {
+            path: ROUTE_PATHS.ADMIN.DASHBOARD,
+            element: (
+              <SuspenseWrapper>
+                <AdminDashboardPage />
+              </SuspenseWrapper>
+            ),
+          },
+          {
+            path: ROUTE_PATHS.ADMIN.USERS,
+            element: (
+              <SuspenseWrapper>
+                <AdminUsersPage />
+              </SuspenseWrapper>
+            ),
+          },
+          {
+            path: ROUTE_PATHS.ADMIN.CREATE_ADMIN,
+            element: (
+              <SuspenseWrapper>
+                <AdminCreateAdminPage />
+              </SuspenseWrapper>
+            ),
+          },
+          {
+            path: ROUTE_PATHS.ADMIN.USER_DETAIL,
+            element: (
+              <SuspenseWrapper>
+                <AdminUserDetailPage />
+              </SuspenseWrapper>
+            ),
+          },
+          {
+            path: ROUTE_PATHS.ADMIN.COURSES,
+            element: (
+              <SuspenseWrapper>
+                <AdminCoursesPage />
+              </SuspenseWrapper>
+            ),
+          },
+          {
+            path: ROUTE_PATHS.ADMIN.COURSE_DETAIL,
+            element: (
+              <SuspenseWrapper>
+                <AdminCourseDetailPage />
+              </SuspenseWrapper>
+            ),
+          },
+          {
+            path: ROUTE_PATHS.ADMIN.ORDERS,
+            element: (
+              <SuspenseWrapper>
+                <AdminOrdersPage />
+              </SuspenseWrapper>
+            ),
+          },
+          {
+            path: ROUTE_PATHS.ADMIN.ORDER_DETAIL,
+            element: (
+              <SuspenseWrapper>
+                <AdminOrderDetailPage />
+              </SuspenseWrapper>
+            ),
+          },
+          {
+            path: ROUTE_PATHS.ADMIN.QUIZZES,
+            element: (
+              <SuspenseWrapper>
+                <AdminQuizzesPage />
+              </SuspenseWrapper>
+            ),
+          },
+          {
+            path: ROUTE_PATHS.ADMIN.QUIZ_DETAIL,
+            element: (
+              <SuspenseWrapper>
+                <AdminQuizDetailPage />
+              </SuspenseWrapper>
+            ),
+          },
+          {
+            path: ROUTE_PATHS.ADMIN.DOCUMENTS,
+            element: (
+              <SuspenseWrapper>
+                <AdminDocumentsPage />
+              </SuspenseWrapper>
+            ),
+          },
+          {
+            path: ROUTE_PATHS.ADMIN.INTERVENTIONS,
+            element: (
+              <SuspenseWrapper>
+                <AdminInterventionsPage />
+              </SuspenseWrapper>
+            ),
+          },
+          {
+            path: ROUTE_PATHS.ADMIN.NOTIFICATIONS,
+            element: (
+              <SuspenseWrapper>
+                <NotificationsPage />
+              </SuspenseWrapper>
+            ),
+          },
+          {
+            path: ROUTE_PATHS.ADMIN.NOTIFICATIONS_LOG,
+            element: (
+              <SuspenseWrapper>
+                <AdminNotificationsLogPage />
+              </SuspenseWrapper>
+            ),
+          },
+          {
+            path: ROUTE_PATHS.ADMIN.AGENT_LOGS,
+            element: (
+              <SuspenseWrapper>
+                <AdminAgentLogsPage />
               </SuspenseWrapper>
             ),
           },

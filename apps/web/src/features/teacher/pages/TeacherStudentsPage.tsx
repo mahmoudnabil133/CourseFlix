@@ -11,13 +11,12 @@ function formatMoney(minor: number, currency: string) {
   return `${(minor / 100).toLocaleString('ar-EG')} ${currency}`
 }
 
-function shortId(id: string) {
-  return id.length > 12 ? `${id.slice(0, 8)}...${id.slice(-4)}` : id
-}
-
 export function TeacherStudentsPage() {
-  const { data, isLoading, error, refetch } = useTeacherStudents()
   const [filter, setFilter] = useState<Filter>('all')
+  const [studentIdSearch, setStudentIdSearch] = useState('')
+  const { data, isLoading, error, refetch } = useTeacherStudents(
+    studentIdSearch.trim() || undefined,
+  )
 
   const students = useMemo(() => {
     if (!data) return []
@@ -82,6 +81,17 @@ export function TeacherStudentsPage() {
         </div>
       </section>
 
+      <div className="tf section" style={{ maxWidth: 360 }}>
+        <label htmlFor="teacher-students-id-search">البحث بمعرف تتبع الفيديو (ID)</label>
+        <input
+          id="teacher-students-id-search"
+          dir="ltr"
+          value={studentIdSearch}
+          onChange={(event) => setStudentIdSearch(event.target.value)}
+          placeholder="الصق الكود الظاهر على الفيديو المسرّب..."
+        />
+      </div>
+
       <div className="actions section">
         {[
           { label: 'الكل', value: 'all' },
@@ -124,9 +134,7 @@ export function TeacherStudentsPage() {
                     </span>
                   </td>
                   <td>
-                    <code dir="ltr" title={student.id}>
-                      {shortId(student.id)}
-                    </code>
+                    <code dir="ltr">{student.id}</code>
                   </td>
                   <td>
                     <span className={`chip ${student.isSubscribedToAnyCourse ? 'green' : 'outline'}`}>

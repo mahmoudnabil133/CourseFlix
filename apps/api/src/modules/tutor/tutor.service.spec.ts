@@ -72,6 +72,7 @@ describe('TutorService', () => {
     };
     retrievalPort = {
       search: jest.fn().mockResolvedValue([relevantChunk]),
+      searchVideo: jest.fn(),
     };
     llmProvider = {
       generateAnswer: jest.fn().mockResolvedValue({

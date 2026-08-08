@@ -182,6 +182,166 @@ export class CommerceService {
     });
   }
 
+  /**
+   * Resolves an order for a real (Paymob) payment session: must belong to
+   * the authenticated student and not already be paid. Guards the price/paid
+   * state exactly like confirmOrder — the client can never pay twice or pay
+   * for someone else's order.
+   */
+  async getPendingPayableOrder(
+    studentId: string,
+    orderId: string,
+  ): Promise<OrderEntity> {
+    const order = await this.ordersRepository.findOne({
+      where: { id: orderId, studentId },
+    });
+    if (!order) {
+      throw new NotFoundException('Order not found.');
+    }
+    if (order.status === 'paid') {
+      throw new ConflictException('This order is already paid.');
+    }
+    return order;
+  }
+
+  /**
+   * Records the pending Paymob attempt started by `initiatePaymob`. The
+   * attempt stays `pending` until the server-to-server webhook resolves it
+   * to `paid` or `failed`, so retries and the GET redirect can both audit
+   * the attempt ledger.
+   */
+  async recordPaymobPaymentAttempt(
+    orderId: string,
+    paymobOrderId: string,
+  ): Promise<void> {
+    const attemptNo =
+      (await this.paymentsRepository.count({ where: { orderId } })) + 1;
+    await this.paymentsRepository.save(
+      this.paymentsRepository.create({
+        orderId,
+        attemptNo,
+        status: 'pending',
+        method: 'paymob',
+        paymobOrderId,
+      }),
+    );
+  }
+
+  /**
+   * Maps a Paymob order id (the only identifier the browser GET redirect
+   * carries) back to the course id the student paid for.
+   */
+  async findCourseIdByPaymobOrderId(
+    paymobOrderId: string,
+  ): Promise<string | null> {
+    const payment = await this.paymentsRepository.findOne({
+      where: { paymobOrderId, method: 'paymob' },
+    });
+    if (!payment) {
+      return null;
+    }
+    const items = await this.loadItems(payment.orderId);
+    return items[0]?.courseId ?? null;
+  }
+
+  /**
+   * Authoritative fulfillment driven by Paymob's server-to-server webhook.
+   * Runs in one locked transaction: a duplicate or already-processed webhook
+   * is a no-op and can never create two payments, two paid orders, or two
+   * enrollments — the same guarantee confirmOrder gives the test adapter.
+   */
+  async fulfillPaymobWebhook(payload: {
+    merchantOrderId: string;
+    paymobOrderId: string;
+    transactionId: string;
+    success: boolean;
+  }): Promise<void> {
+    return this.dataSource.transaction(async (manager) => {
+      const orderRepo = manager.getRepository(OrderEntity);
+      const paymentRepo = manager.getRepository(PaymentEntity);
+
+      const order = await orderRepo.findOne({
+        where: { id: payload.merchantOrderId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!order) {
+        // Unknown order id — acknowledge and move on so Paymob doesn't retry
+        // forever over a webhook we can never resolve.
+        return;
+      }
+      if (order.status === 'paid') {
+        // Duplicate webhook for an already-fulfilled order.
+        return;
+      }
+
+      const items = await manager
+        .getRepository(OrderItemEntity)
+        .find({ where: { orderId: order.id }, order: { createdAt: 'ASC' } });
+
+      // Resolve the pending attempt started by initiatePaymob (matched by
+      // Paymob's order id), so one Paymob payment = exactly one payment row.
+      // A webhook for an order we never initiated falls back to a new row.
+      const pendingAttempt = await paymentRepo.findOne({
+        where: {
+          orderId: order.id,
+          method: 'paymob',
+          status: 'pending',
+          paymobOrderId: payload.paymobOrderId,
+        },
+        order: { createdAt: 'DESC' },
+      });
+
+      const persistAttempt = async () => {
+        const attemptNo = pendingAttempt
+          ? pendingAttempt.attemptNo
+          : (await paymentRepo.count({ where: { orderId: order.id } })) + 1;
+        return paymentRepo.save(
+          paymentRepo.create({
+            orderId: order.id,
+            attemptNo,
+            status: payload.success ? 'paid' : 'failed',
+            method: 'paymob',
+            externalRef: payload.transactionId,
+            paymobOrderId: payload.paymobOrderId,
+          }),
+        );
+      };
+
+      if (payload.success) {
+        order.status = 'paid';
+        order.paymentStatus = 'paid';
+        order.paidAt = new Date();
+        await orderRepo.save(order);
+
+        if (pendingAttempt) {
+          pendingAttempt.status = 'paid';
+          pendingAttempt.externalRef = payload.transactionId;
+          await paymentRepo.save(pendingAttempt);
+        } else {
+          await persistAttempt();
+        }
+
+        await this.ensureEnrollment(
+          manager,
+          order.studentId,
+          items[0].courseId,
+        );
+        return;
+      }
+
+      order.paymentStatus = 'failed';
+      await orderRepo.save(order);
+
+      if (pendingAttempt) {
+        pendingAttempt.status = 'failed';
+        pendingAttempt.externalRef = payload.transactionId;
+        await paymentRepo.save(pendingAttempt);
+      } else {
+        await persistAttempt();
+      }
+    });
+  }
+
   async getOrder(studentId: string, orderId: string): Promise<OrderResponse> {
     const order = await this.ordersRepository.findOne({
       where: { id: orderId },

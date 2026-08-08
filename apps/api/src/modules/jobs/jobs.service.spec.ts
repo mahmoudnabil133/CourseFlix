@@ -22,6 +22,8 @@ describe('JobsService', () => {
     createQueryBuilder: jest.Mock;
   };
   let ingestionQueue: { add: jest.Mock; getJob: jest.Mock };
+  let videoIngestionQueue: { add: jest.Mock; getJob: jest.Mock };
+  let examGenerationQueue: { add: jest.Mock; getJob: jest.Mock };
 
   const documentId = 'document-1';
 
@@ -41,6 +43,8 @@ describe('JobsService', () => {
       createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
     };
     ingestionQueue = { add: jest.fn(), getJob: jest.fn() };
+    videoIngestionQueue = { add: jest.fn(), getJob: jest.fn() };
+    examGenerationQueue = { add: jest.fn(), getJob: jest.fn() };
 
     const moduleRef = await Test.createTestingModule({
       providers: [
@@ -54,6 +58,14 @@ describe('JobsService', () => {
           useValue: {},
         },
         { provide: getQueueToken('ingestion'), useValue: ingestionQueue },
+        {
+          provide: getQueueToken('video-ingestion'),
+          useValue: videoIngestionQueue,
+        },
+        {
+          provide: getQueueToken('exam-generation'),
+          useValue: examGenerationQueue,
+        },
       ],
     }).compile();
 
@@ -123,6 +135,65 @@ describe('JobsService', () => {
       // No second row, no second BullMQ job.
       expect(aiJobsRepository.save).not.toHaveBeenCalled();
       expect(ingestionQueue.add).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('enqueueVideoIngestion', () => {
+    it('creates a new ai_jobs row and a deterministic BullMQ job when none exists', async () => {
+      videoIngestionQueue.getJob.mockResolvedValue(undefined);
+      aiJobsRepository.save.mockResolvedValue({ id: 'ai-job-2' });
+
+      const bullJobId = await jobsService.enqueueVideoIngestion(
+        'transcript-1',
+        1,
+      );
+
+      expect(bullJobId).toBe('video-ingest:transcript-1:v1');
+      expect(aiJobsRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          jobType: 'video_ingestion',
+          targetEntityType: 'video_transcript',
+          targetEntityId: 'transcript-1',
+        }),
+      );
+      expect(videoIngestionQueue.add).toHaveBeenCalledWith(
+        'video-ingestion',
+        { jobId: 'ai-job-2' },
+        expect.objectContaining({ jobId: bullJobId, attempts: 3 }),
+      );
+    });
+
+    it('does not duplicate a job that is still active', async () => {
+      videoIngestionQueue.getJob.mockResolvedValue({
+        getState: jest.fn().mockResolvedValue('active'),
+      });
+
+      await jobsService.enqueueVideoIngestion('transcript-1', 1);
+
+      expect(aiJobsRepository.save).not.toHaveBeenCalled();
+      expect(videoIngestionQueue.add).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('enqueueExamGeneration', () => {
+    it('creates a new ai_jobs row per attempt and enqueues it', async () => {
+      aiJobsRepository.save.mockResolvedValue({ id: 'ai-job-3' });
+
+      const bullJobId = await jobsService.enqueueExamGeneration('request-1');
+
+      expect(bullJobId).toBe('exam-generation:request-1:ai-job-3');
+      expect(aiJobsRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          jobType: 'exam_generation',
+          targetEntityType: 'quiz_generation_request',
+          targetEntityId: 'request-1',
+        }),
+      );
+      expect(examGenerationQueue.add).toHaveBeenCalledWith(
+        'exam-generation',
+        { jobId: 'ai-job-3' },
+        expect.objectContaining({ jobId: bullJobId }),
+      );
     });
   });
 

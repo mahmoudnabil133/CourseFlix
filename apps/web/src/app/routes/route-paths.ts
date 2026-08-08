@@ -38,6 +38,25 @@ export const ROUTE_PATHS = {
     SALES: '/teacher/sales',
     ANALYTICS: '/teacher/analytics',
   },
+
+  ADMIN: {
+    ROOT: '/admin',
+    DASHBOARD: '/admin/dashboard',
+    USERS: '/admin/users',
+    USER_DETAIL: '/admin/users/:userId',
+    CREATE_ADMIN: '/admin/users/new',
+    COURSES: '/admin/courses',
+    COURSE_DETAIL: '/admin/courses/:courseId',
+    ORDERS: '/admin/orders',
+    ORDER_DETAIL: '/admin/orders/:orderId',
+    QUIZZES: '/admin/quizzes',
+    QUIZ_DETAIL: '/admin/quizzes/:quizId',
+    DOCUMENTS: '/admin/documents',
+    INTERVENTIONS: '/admin/interventions',
+    NOTIFICATIONS: '/admin/notifications',
+    NOTIFICATIONS_LOG: '/admin/notifications-log',
+    AGENT_LOGS: '/admin/agent-logs',
+  },
 } as const
 
 export type RoutePaths = typeof ROUTE_PATHS

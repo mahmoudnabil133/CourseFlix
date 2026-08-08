@@ -8,6 +8,8 @@ import {
   RetrievalPort,
   SearchQueryInput,
   RetrievedChunk,
+  SearchVideoQueryInput,
+  RetrievedVideoChunk,
 } from '../../common/ports/retrieval.port';
 import type { EmbeddingProvider } from './embedding.adapter';
 import { EMBEDDING_PROVIDER } from './embedding.adapter';
@@ -18,6 +20,15 @@ interface DocumentChunkRow {
   document_id: string;
   page_number: number;
   text_preview: string;
+}
+
+interface VideoChunkRow {
+  id: string;
+  vector_id: string;
+  video_transcript_id: string;
+  start_seconds: number | null;
+  end_seconds: number | null;
+  text_preview: string | null;
 }
 
 interface ChromaQueryResult {
@@ -156,6 +167,98 @@ export class RetrievalService implements RetrievalPort {
         documentId: chunkRow.document_id,
         page: chunkRow.page_number,
         excerpt: chromaDoc || chunkRow.text_preview,
+        score: distance,
+      });
+    }
+
+    return results;
+  }
+
+  /**
+   * Queries ChromaDB vector store with mandatory video-level isolation
+   * filter — scoped to a single video's transcript, not the whole course.
+   *
+   * Filter rule:
+   * `where: { $and: [{ videoTranscriptId: input.videoTranscriptId }, { isActive: true }] }`
+   *
+   * Joins retrieved vector IDs with Postgres `video_chunks` to populate
+   * exact `startSeconds`/`endSeconds` citation data.
+   */
+  async searchVideo(input: SearchVideoQueryInput): Promise<RetrievedVideoChunk[]> {
+    const { videoTranscriptId, query, topK = 5 } = input;
+
+    if (!videoTranscriptId) {
+      throw new Error('Retrieval search failed: videoTranscriptId is required');
+    }
+
+    if (!query || !query.trim()) {
+      return [];
+    }
+
+    const [queryVector] = await this.embeddingProvider.embed([query]);
+    if (!queryVector || queryVector.length === 0) {
+      return [];
+    }
+
+    // Mandatory videoTranscriptId and isActive isolation filter
+    const chromaQuery: Parameters<Collection['query']>[0] = {
+      queryEmbeddings: [queryVector],
+      nResults: topK,
+      where: {
+        $and: [
+          { videoTranscriptId } as Record<string, string>,
+          { isActive: true },
+        ],
+      },
+    };
+
+    const queryResponse = (await this.queryCollectionWithRetry(
+      chromaQuery,
+    )) as unknown as ChromaQueryResult;
+
+    const ids = queryResponse.ids?.[0] || [];
+    const distances = queryResponse.distances?.[0] || [];
+    const documents = queryResponse.documents?.[0] || [];
+
+    if (ids.length === 0) {
+      return [];
+    }
+
+    // Join with Postgres video_chunks table to retrieve the relational
+    // chunk ID and timestamp citation data.
+    const chunkRows = (await this.dataSource.query(
+      `SELECT id, vector_id, video_transcript_id, start_seconds, end_seconds, text_preview
+         FROM video_chunks
+        WHERE vector_id = ANY($1)
+          AND is_active = true`,
+      [ids],
+    )) as unknown as VideoChunkRow[];
+
+    const chunkMap = new Map<string, VideoChunkRow>();
+    for (const row of chunkRows) {
+      chunkMap.set(row.vector_id, row);
+    }
+
+    const results: RetrievedVideoChunk[] = [];
+
+    for (let i = 0; i < ids.length; i++) {
+      const vectorId = ids[i];
+      const distance = distances[i] ?? 0;
+      const chromaDoc = documents[i] || '';
+      const chunkRow = chunkMap.get(vectorId);
+
+      // If video chunk is no longer active in Postgres, skip it
+      if (!chunkRow) {
+        continue;
+      }
+
+      results.push({
+        chunkId: chunkRow.id,
+        vectorId,
+        videoTranscriptId: chunkRow.video_transcript_id,
+        startSeconds: chunkRow.start_seconds,
+        endSeconds: chunkRow.end_seconds,
+        excerpt: chromaDoc || chunkRow.text_preview || '',
         score: distance,
       });
     }

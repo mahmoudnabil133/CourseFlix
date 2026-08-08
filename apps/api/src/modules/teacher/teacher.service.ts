@@ -1,6 +1,10 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, IsNull, Repository } from 'typeorm';
+import { Brackets, In, IsNull, Repository } from 'typeorm';
+import {
+  looksLikeUuid,
+  watermarkSqlExpression,
+} from '../../common/utils/watermark-id.util';
 import { OrderItemEntity } from '../commerce/entities/order-item.entity';
 import { OrderEntity } from '../commerce/entities/order.entity';
 import { CoursesService } from '../courses/courses.service';
@@ -148,13 +152,13 @@ export class TeacherService {
     return courses.map((course) => this.toListItem(course));
   }
 
-  async getStudents(teacherId: string): Promise<TeacherStudentsResponse> {
+  async getStudents(
+    teacherId: string,
+    studentIdSearch?: string,
+  ): Promise<TeacherStudentsResponse> {
     const [courses, students] = await Promise.all([
       this.coursesService.findOwnedCourses(teacherId),
-      this.usersRepository.find({
-        where: { role: 'student', deletedAt: IsNull() },
-        order: { fullName: 'ASC', createdAt: 'ASC' },
-      }),
+      this.findStudents(studentIdSearch),
     ]);
 
     const courseIds = courses.map((course) => course.id);
@@ -343,6 +347,36 @@ export class TeacherService {
     dto: ReorderDto,
   ): Promise<void> {
     await this.coursesService.reorderLessons(sectionId, teacherId, dto.items);
+  }
+
+  // `studentIdSearch` is matched against the student's watermark code
+  // (the traceable ID burned into their video playback — see
+  // watermark-id.util.ts) and, if it looks like one, their full UUID.
+  // Lets a teacher paste the code off a leaked recording straight in.
+  private async findStudents(studentIdSearch?: string): Promise<UserEntity[]> {
+    const query = this.usersRepository
+      .createQueryBuilder('user')
+      .where('user.role = :role', { role: 'student' })
+      .andWhere('user.deleted_at IS NULL');
+
+    const search = studentIdSearch?.trim();
+    if (search) {
+      query.andWhere(
+        new Brackets((sub) => {
+          sub.where(`${watermarkSqlExpression('user')} = UPPER(:search)`, {
+            search,
+          });
+          if (looksLikeUuid(search)) {
+            sub.orWhere('user.id = :fullId', { fullId: search });
+          }
+        }),
+      );
+    }
+
+    return query
+      .orderBy('user.full_name', 'ASC')
+      .addOrderBy('user.created_at', 'ASC')
+      .getMany();
   }
 
   private toListItem(course: CourseEntity): TeacherCourseListItem {

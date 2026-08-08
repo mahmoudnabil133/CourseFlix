@@ -134,7 +134,8 @@
   overflow-y: auto;
   padding-top: 26px;
   padding-bottom: 48px;
-  padding-inline-end: 12px;
+  /* padding-inline-end: 12px; */
+  /* padding-right: 10px; */
 }
 
 /* ===== Material Symbols ===== */
@@ -881,6 +882,7 @@ code {
   font-size: 14.5px;
   color: var(--on-surface);
   width: 100%;
+  /* margin: 10px; */
 }
 
 .tf textarea {
@@ -1110,6 +1112,10 @@ h1.page-title { font-size: 28px; font-weight: 700; margin: 0 0 6px; letter-spaci
 /* ---------- Cards ---------- */
 .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
 .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; }
+/* Main content + narrower side panel (role/status controls, danger
+   zone, notify-owner form) — fills the page width edge to edge instead
+   of a single narrow column floating with dead space on either side. */
+.detail-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 22px; align-items: start; }
 .card {
   background: var(--surface-container-low);
   border-radius: 22px;
@@ -1138,7 +1144,7 @@ h1.page-title { font-size: 28px; font-weight: 700; margin: 0 0 6px; letter-spaci
 .thumb .t3 { width: 32px; height: 30px; bottom: 20px; inset-inline-end: 20px; border-radius: 9px; }
 .course-card .row { display: flex; gap: 18px; align-items: center; }
 .course-card .row .info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
-.actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding-right: 6px; }
 
 /* ---------- Progress ---------- */
 .progress { height: 6px; border-radius: 999px; background: var(--data-track); position: relative; }
@@ -1273,12 +1279,24 @@ table.mtable { width: 100%; border-collapse: collapse; min-width: 760px; }
   font-weight: 700;
   padding: 16px 20px;
   border-bottom: 1px solid var(--outline-variant);
+  white-space: nowrap;
 }
 .mtable td {
   padding: 14px 20px;
   border-bottom: 1px solid var(--outline-variant);
   font-size: 14px;
   vertical-align: middle;
+  /* Single-line rows — a long name/title pushes the table's own
+     horizontal scroll (.table-wrap) instead of wrapping and throwing
+     row heights out of sync with neighboring cells. A cell that
+     deliberately stacks two lines (e.g. a name + email) does so via an
+     inner block-level child, which still gets its own single line.
+     Cells with an actions row of buttons opt back into wrapping so
+     nothing gets clipped. */
+  white-space: nowrap;
+}
+.mtable td:has(.actions) {
+  white-space: normal;
 }
 .mtable tr:last-child td { border-bottom: none; }
 .mtable tr:hover td { background: var(--hover); }
@@ -1612,7 +1630,7 @@ table.mtable { width: 100%; border-collapse: collapse; min-width: 760px; }
 }
 
 @media (max-width: 860px) {
-  .grid-3, .grid-2 { grid-template-columns: 1fr; }
+  .grid-3, .grid-2, .detail-grid { grid-template-columns: 1fr; }
   .quiz-options-grid { grid-template-columns: 1fr; }
   .section-head h2 { font-size: 20px; }
   h1.page-title { font-size: 23px; }

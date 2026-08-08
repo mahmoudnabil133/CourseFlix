@@ -17,6 +17,12 @@ export class JobsService {
 
     @InjectQueue('ingestion')
     private readonly ingestionQueue: Queue,
+
+    @InjectQueue('video-ingestion')
+    private readonly videoIngestionQueue: Queue,
+
+    @InjectQueue('exam-generation')
+    private readonly examGenerationQueue: Queue,
   ) {}
 
   /**
@@ -103,6 +109,90 @@ export class JobsService {
         jobId: bullJobId,
         attempts: 3,
         backoff: { type: 'exponential', delay: 5_000 },
+      },
+    );
+
+    return bullJobId;
+  }
+
+  /**
+   * Same idempotency shape as {@link enqueueDocumentIngestion} — one
+   * video never gets two in-flight caption-ingestion jobs — but on its
+   * own queue so a stuck video job can never block PDF ingestion.
+   */
+  async enqueueVideoIngestion(
+    videoTranscriptId: string,
+    version: number,
+  ): Promise<string> {
+    // `version` lives in the job ID (not just `videoTranscriptId`) so a
+    // teacher re-pointing a lesson at a new video URL — which bumps the
+    // same transcript row's version — always gets a fresh job instead of
+    // being treated as a no-op because the old version already completed.
+    const bullJobId = `video-ingest:${videoTranscriptId}:v${version}`;
+    const existingJob = await this.videoIngestionQueue.getJob(bullJobId);
+
+    if (existingJob) {
+      const state = await existingJob.getState();
+
+      if (state === 'failed') {
+        const jobData = existingJob.data as { jobId: string };
+        await this.aiJobsRepository.update(jobData.jobId, {
+          status: 'queued',
+          startedAt: null,
+          finishedAt: null,
+          errorMessage: null,
+        });
+        await existingJob.retry('failed');
+        return bullJobId;
+      }
+
+      return bullJobId;
+    }
+
+    const savedJob = await this.aiJobsRepository.save(
+      this.aiJobsRepository.create({
+        jobType: 'video_ingestion',
+        targetEntityType: 'video_transcript',
+        targetEntityId: videoTranscriptId,
+      }),
+    );
+
+    await this.videoIngestionQueue.add(
+      'video-ingestion',
+      { jobId: savedJob.id },
+      {
+        jobId: bullJobId,
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 5_000 },
+      },
+    );
+
+    return bullJobId;
+  }
+
+  /**
+   * Each call is a distinct attempt (first generation or a
+   * regenerate-with-feedback retry), so unlike the two enqueue methods
+   * above there is no bullJobId idempotency key to dedupe against —
+   * `ExamGenerationService` is the one deciding when a new attempt is
+   * allowed (only from `pending_review`/`failed`).
+   */
+  async enqueueExamGeneration(requestId: string): Promise<string> {
+    const savedJob = await this.aiJobsRepository.save(
+      this.aiJobsRepository.create({
+        jobType: 'exam_generation',
+        targetEntityType: 'quiz_generation_request',
+        targetEntityId: requestId,
+      }),
+    );
+
+    const bullJobId = `exam-generation:${requestId}:${savedJob.id}`;
+    await this.examGenerationQueue.add(
+      'exam-generation',
+      { jobId: savedJob.id },
+      {
+        jobId: bullJobId,
+        attempts: 1,
       },
     );
 

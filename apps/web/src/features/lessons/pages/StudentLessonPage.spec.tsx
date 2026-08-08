@@ -77,7 +77,7 @@ describe('StudentLessonPage', () => {
     const player = await screen.findByTitle('قانون نيوتن الأول')
     expect(player).toHaveAttribute(
       'src',
-      'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0&modestbranding=1&iv_load_policy=3&playsinline=1',
+      'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0&modestbranding=1&iv_load_policy=3&playsinline=1&enablejsapi=1',
     )
   })
 

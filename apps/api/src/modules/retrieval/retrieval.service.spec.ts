@@ -206,4 +206,90 @@ describe('RetrievalService (Isolation Proof)', () => {
       }),
     ).rejects.toThrow('Retrieval search failed: courseId is required');
   });
+
+  describe('searchVideo', () => {
+    const transcriptA = 'transcript-A-uuid';
+    const transcriptB = 'transcript-B-uuid';
+    const videoChunkAId = 'video-chunk-A-db-id';
+
+    interface MockVideoQueryOptions {
+      where: {
+        $and: [{ videoTranscriptId: string }, { isActive: boolean }];
+      };
+    }
+
+    it('proves video isolation: queries transcript A and joins video_chunks, never courseId', async () => {
+      mockCollection.query.mockImplementation((options: MockVideoQueryOptions) => {
+        expect(options.where).toEqual({
+          $and: [{ videoTranscriptId: transcriptA }, { isActive: true }],
+        });
+
+        return Promise.resolve({
+          ids: [[`video:${transcriptA}:1:0`]],
+          distances: [[0.05]],
+          documents: [['في الدقيقة الثالثة يشرح المحاضر قانون نيوتن الثالث']],
+        });
+      });
+
+      dataSource.query.mockResolvedValue([
+        {
+          id: videoChunkAId,
+          vector_id: `video:${transcriptA}:1:0`,
+          video_transcript_id: transcriptA,
+          start_seconds: 180,
+          end_seconds: 200,
+          text_preview: 'في الدقيقة الثالثة يشرح المحاضر قانون نيوتن الثالث',
+        },
+      ]);
+
+      const results = await service.searchVideo({
+        videoTranscriptId: transcriptA,
+        query: 'قانون نيوتن الثالث',
+        topK: 5,
+      });
+
+      expect(results).toHaveLength(1);
+      expect(results[0].chunkId).toBe(videoChunkAId);
+      expect(results[0].videoTranscriptId).toBe(transcriptA);
+      expect(results[0].startSeconds).toBe(180);
+      expect(results[0].endSeconds).toBe(200);
+      expect(results[0].vectorId).toBe(`video:${transcriptA}:1:0`);
+
+      const calls = mockCollection.query.mock.calls as unknown as Array<
+        [MockVideoQueryOptions]
+      >;
+      expect(calls[0][0].where.$and[0].videoTranscriptId).not.toBe(
+        transcriptB,
+      );
+      expect(results.some((r) => r.videoTranscriptId === transcriptB)).toBe(
+        false,
+      );
+    });
+
+    it('returns empty array if videoTranscriptId has no matching chunks', async () => {
+      mockCollection.query.mockResolvedValue({
+        ids: [[]],
+        distances: [[]],
+        documents: [[]],
+      });
+
+      const results = await service.searchVideo({
+        videoTranscriptId: 'non-existent-transcript',
+        query: 'الميكانيكا الكلاسيكية',
+      });
+
+      expect(results).toEqual([]);
+    });
+
+    it('throws error if videoTranscriptId is missing from search query input', async () => {
+      await expect(
+        service.searchVideo({
+          videoTranscriptId: '',
+          query: 'قانون نيوتن',
+        }),
+      ).rejects.toThrow(
+        'Retrieval search failed: videoTranscriptId is required',
+      );
+    });
+  });
 });

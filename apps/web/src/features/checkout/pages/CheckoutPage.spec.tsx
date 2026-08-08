@@ -34,18 +34,43 @@ function pendingOrder(overrides: Partial<Record<string, unknown>> = {}) {
 }
 
 describe('CheckoutPage', () => {
-  it('creates a draft order and completes a successful payment', async () => {
+  it('creates a draft order and redirects to Paymob when the student pays', async () => {
+    const paymentUrl = 'https://accept.paymob.com/api/acceptance/iframes/1234?payment_token=token-1'
+    const originalHref = window.location.href
+    Object.defineProperty(window, 'location', {
+      value: { ...window.location, href: originalHref },
+      writable: true,
+    })
+
     server.use(
       http.post(`${env.apiBaseUrl}/checkout/orders`, () =>
         HttpResponse.json(pendingOrder(), { status: 201 }),
       ),
-      http.post(`${env.apiBaseUrl}/checkout/orders/order-1/confirm`, () =>
+      http.post(`${env.apiBaseUrl}/paymob/orders/order-1/pay`, () =>
+        HttpResponse.json({ paymentUrl, paymobOrderId: '9001' }),
+      ),
+    )
+
+    const user = userEvent.setup()
+    renderPage()
+
+    expect(await screen.findByText('الميكانيكا الكلاسيكية')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'ادفع الآن' }))
+
+    await waitFor(() => {
+      expect(window.location.href).toBe(paymentUrl)
+    })
+  })
+
+  it('shows an error when Paymob initiation fails', async () => {
+    server.use(
+      http.post(`${env.apiBaseUrl}/checkout/orders`, () =>
+        HttpResponse.json(pendingOrder(), { status: 201 }),
+      ),
+      http.post(`${env.apiBaseUrl}/paymob/orders/order-1/pay`, () =>
         HttpResponse.json(
-          pendingOrder({
-            status: 'paid',
-            paymentStatus: 'paid',
-            paidAt: '2026-08-05T10:00:00.000Z',
-          }),
+          { statusCode: 502, message: 'bad gateway', error: 'Bad Gateway' },
+          { status: 502 },
         ),
       ),
     )
@@ -56,39 +81,32 @@ describe('CheckoutPage', () => {
     expect(await screen.findByText('الميكانيكا الكلاسيكية')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'ادفع الآن' }))
 
-    expect(await screen.findByText('تم الدفع بنجاح')).toBeInTheDocument()
-    expect(screen.getByText('order-1')).toBeInTheDocument()
-    expect(screen.getByText(/EGP/)).toBeInTheDocument()
+    expect(
+      await screen.findByText('تعذر الاتصال بمزود الدفع. يرجى المحاولة مرة أخرى.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('bad gateway')).not.toBeInTheDocument()
   })
 
-  it('shows a retryable decline and succeeds when the student retries the same order', async () => {
-    let confirmCalls = 0
+  it('redirects to the explore-courses page when the student declines the simulated payment', async () => {
     server.use(
       http.post(`${env.apiBaseUrl}/checkout/orders`, () =>
         HttpResponse.json(pendingOrder(), { status: 201 }),
       ),
-      http.post(`${env.apiBaseUrl}/checkout/orders/order-1/confirm`, () => {
-        confirmCalls += 1
-        if (confirmCalls === 1) {
-          return HttpResponse.json(pendingOrder({ status: 'pending', paymentStatus: 'failed' }))
-        }
-        return HttpResponse.json(
-          pendingOrder({ status: 'paid', paymentStatus: 'paid', paidAt: '2026-08-05T10:00:00.000Z' }),
-        )
-      }),
     )
 
     const user = userEvent.setup()
-    renderPage()
+    renderWithProviders(
+      <Routes>
+        <Route path="/student/checkout/:courseId" element={<CheckoutPage />} />
+        <Route path="/student/browse" element={<div>استكشف الدورات</div>} />
+      </Routes>,
+      { initialEntries: ['/student/checkout/course-1'] },
+    )
 
-    await user.click(await screen.findByRole('button', { name: 'محاكاة رفض الدفع (تجريبي)' }))
+    await screen.findByText('الميكانيكا الكلاسيكية')
+    await user.click(screen.getByRole('button', { name: 'محاكاة رفض الدفع (تجريبي)' }))
 
-    expect(await screen.findByText('تم رفض عملية الدفع')).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: 'إعادة المحاولة' }))
-
-    expect(await screen.findByText('تم الدفع بنجاح')).toBeInTheDocument()
-    expect(confirmCalls).toBe(2)
+    expect(await screen.findByText('استكشف الدورات')).toBeInTheDocument()
   })
 
   it('shows a distinct already-owned message and links to the course instead of a broken checkout', async () => {

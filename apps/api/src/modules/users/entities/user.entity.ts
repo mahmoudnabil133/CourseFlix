@@ -29,7 +29,7 @@ export class UserEntity {
 
   @Column({
     type: 'enum',
-    enum: ['student', 'teacher'],
+    enum: ['student', 'teacher', 'admin'],
     enumName: 'user_role',
   })
   role!: UserRole;

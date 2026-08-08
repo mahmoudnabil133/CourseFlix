@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Repository } from 'typeorm';
 import { UserEntity } from './entities/user.entity';
+import type { UserRole } from '../auth/interfaces/authenticated-user.interface';
 
 @Injectable()
 export class UsersService {
@@ -40,7 +41,7 @@ export class UsersService {
     email: string,
     passwordHash: string,
     status: 'active' | 'suspended' | 'inactive',
-    role: 'student' | 'teacher',
+    role: UserRole,
   ): Promise<Omit<UserEntity, 'passwordHash'>> {
     const normalizedEmail = email.trim().toLowerCase();
     const newUser = this.usersRepository.create({

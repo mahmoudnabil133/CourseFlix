@@ -9,6 +9,10 @@ export interface SeededUsers {
   teacher: UserEntity;
   /** The primary demo student, same reasoning. */
   student: UserEntity;
+  /** The bootstrap admin account — every other admin is created from
+   *  inside the admin dashboard, but that flow needs a first admin to
+   *  log in with, which only a seed can provide. */
+  admin: UserEntity;
   teachers: UserEntity[];
   students: UserEntity[];
 }
@@ -53,6 +57,13 @@ export async function seedUsers(dataSource: DataSource): Promise<SeededUsers> {
     role: 'student',
   });
 
+  const admin = await upsertUser(repository, {
+    fullName: 'Platform Admin',
+    email: requireEnv('SEED_ADMIN_EMAIL'),
+    password: requireEnv('SEED_ADMIN_PASSWORD'),
+    role: 'admin',
+  });
+
   const extraStudentNames = [
     'مريم أحمد',
     'يوسف خالد',
@@ -82,6 +93,7 @@ export async function seedUsers(dataSource: DataSource): Promise<SeededUsers> {
   return {
     teacher,
     student,
+    admin,
     teachers: [teacher, secondTeacher],
     students: [student, ...extraStudents],
   };
@@ -93,7 +105,7 @@ async function upsertUser(
     fullName: string;
     email: string;
     password: string;
-    role: 'student' | 'teacher';
+    role: 'student' | 'teacher' | 'admin';
     status?: 'active' | 'suspended' | 'inactive';
   },
 ): Promise<UserEntity> {

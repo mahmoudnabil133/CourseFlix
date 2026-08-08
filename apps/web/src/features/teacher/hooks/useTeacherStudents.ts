@@ -10,7 +10,7 @@ interface UseTeacherStudentsResult {
   refetch: () => void
 }
 
-export function useTeacherStudents(): UseTeacherStudentsResult {
+export function useTeacherStudents(studentId?: string): UseTeacherStudentsResult {
   const [data, setData] = useState<TeacherStudentsResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<ApiError | null>(null)
@@ -24,7 +24,7 @@ export function useTeacherStudents(): UseTeacherStudentsResult {
       setError(null)
 
       try {
-        const students = await getTeacherStudents()
+        const students = await getTeacherStudents({ studentId })
         if (!controller.signal.aborted) {
           setData(students)
         }
@@ -42,7 +42,7 @@ export function useTeacherStudents(): UseTeacherStudentsResult {
     void load()
 
     return () => controller.abort()
-  }, [refetchToken])
+  }, [studentId, refetchToken])
 
   return {
     data,

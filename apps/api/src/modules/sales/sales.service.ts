@@ -181,7 +181,7 @@ export class SalesService {
       .addSelect('COUNT(DISTINCT order.id)', 'ordersCount')
       .groupBy('item.course_id')
       .addGroupBy('course.title')
-      .orderBy('revenueMinor', 'DESC')
+      .orderBy('"revenueMinor"', 'DESC')
       .getRawMany<SalesRow>();
   }
 

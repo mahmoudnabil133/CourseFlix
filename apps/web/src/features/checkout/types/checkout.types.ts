@@ -28,3 +28,8 @@ export interface CreateOrderRequest {
 export interface ConfirmOrderRequest {
   simulate?: PaymentSimulation
 }
+
+export interface InitiatePaymobResponse {
+  paymentUrl: string
+  paymobOrderId: string
+}

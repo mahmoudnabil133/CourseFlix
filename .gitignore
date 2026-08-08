@@ -25,6 +25,7 @@ commit.sh
 AGENTS.md
 nabile-s3-plan.md
 pr.md
+demo-logins.md
 # Local document storage runtime data (STORAGE_ROOT default = ./storage, cwd = apps/api)
 /apps/api/storage/
 

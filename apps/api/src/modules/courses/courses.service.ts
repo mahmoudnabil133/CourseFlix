@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -18,6 +19,7 @@ import { CourseEntity, CourseStatus } from './entities/course.entity';
 import { SectionEntity, SectionStatus } from './entities/section.entity';
 import { LessonEntity, LessonStatus } from './entities/lesson.entity';
 import { VideoEntity } from '../lessons/entities/video.entity';
+import { VideoIngestionService } from '../video-ingestion/video-ingestion.service';
 
 export interface UpdateCourseFields {
   title?: string;
@@ -82,6 +84,8 @@ function normalizeLessonVideoUrl(input: string | null | undefined): string | nul
 
 @Injectable()
 export class CoursesService {
+  private readonly logger = new Logger(CoursesService.name);
+
   constructor(
     @InjectRepository(CourseEntity)
     private readonly coursesRepository: Repository<CourseEntity>,
@@ -92,6 +96,7 @@ export class CoursesService {
     @InjectRepository(VideoEntity)
     private readonly videosRepository: Repository<VideoEntity>,
     private readonly enrollmentsService: EnrollmentsService,
+    private readonly videoIngestionService: VideoIngestionService,
   ) {}
 
   async getCourseDetail(
@@ -147,6 +152,19 @@ export class CoursesService {
       currency: DEFAULT_CURRENCY,
       isEnrolled: enrolledCourseIds.has(course.id),
     }));
+  }
+
+  // Admin-only: platform-wide detail view, bypasses the ownership/
+  // enrollment gating in getCourseDetail() since an admin is neither the
+  // owning teacher nor necessarily enrolled. canEdit is always true here.
+  async getCourseDetailForAdmin(
+    courseId: string,
+  ): Promise<CourseDetailResponseDto> {
+    const course = await this.loadCourseWithSectionsAndLessons(courseId);
+    if (!course) {
+      throw new NotFoundException('Course not found.');
+    }
+    return this.toDetailDto(course, true);
   }
 
   async findOwnedCourses(
@@ -457,7 +475,16 @@ export class CoursesService {
           durationSeconds: null,
         });
 
-    await this.videosRepository.save(video);
+    const savedVideo = await this.videosRepository.save(video);
+
+    // Fire-and-forget: caption ingestion must never block saving the
+    // lesson. A provider fetch failure lands on the video_transcripts
+    // row, not here.
+    this.videoIngestionService.enqueueForVideo(savedVideo).catch((error: unknown) => {
+      this.logger.warn(
+        `Video ingestion enqueue failed for video=${savedVideo.id}: ${String(error)}`,
+      );
+    });
   }
 
   private async syncLessonVideoMetadata(lesson: LessonEntity): Promise<void> {

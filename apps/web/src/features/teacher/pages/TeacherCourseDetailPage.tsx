@@ -5,6 +5,7 @@ import { useCourseDetail } from '../../courses/hooks/useCourseDetail'
 import { DocumentStatusList } from '../../documents/components/DocumentStatusList'
 import { DocumentUploader } from '../../documents/components/DocumentUploader'
 import { useCourseDocuments } from '../../documents/hooks/useCourseDocuments'
+import { ExamGenerationManager } from '../../exam-generation/components/ExamGenerationManager'
 import { TeacherQuizManager } from '../../quizzes/components/TeacherQuizManager'
 import { ErrorState } from '../../../shared/components/ErrorState'
 import { ForbiddenState } from '../../../shared/components/ForbiddenState'
@@ -13,7 +14,7 @@ import { NotFoundState } from '../../../shared/components/NotFoundState'
 import { TeacherContentManager } from '../components/TeacherContentManager'
 import { TeacherCourseForm } from '../components/TeacherCourseForm'
 
-type CourseDetailTab = 'content' | 'quizzes' | 'files'
+type CourseDetailTab = 'content' | 'quizzes' | 'ai-exam' | 'files'
 
 export function TeacherCourseDetailPage() {
   const { courseId } = useParams<{ courseId: string }>()
@@ -63,6 +64,15 @@ export function TeacherCourseDetailPage() {
         <button
           type="button"
           role="tab"
+          aria-selected={activeTab === 'ai-exam'}
+          onClick={() => setActiveTab('ai-exam')}
+          className={`tab${activeTab === 'ai-exam' ? ' active' : ''}`}
+        >
+          امتحان بالذكاء الاصطناعي
+        </button>
+        <button
+          type="button"
+          role="tab"
           aria-selected={activeTab === 'files'}
           onClick={() => setActiveTab('files')}
           className={`tab${activeTab === 'files' ? ' active' : ''}`}
@@ -94,6 +104,8 @@ export function TeacherCourseDetailPage() {
       )}
 
       {activeTab === 'quizzes' && <TeacherQuizManager course={data} />}
+
+      {activeTab === 'ai-exam' && <ExamGenerationManager course={data} />}
 
       {activeTab === 'files' && (
         <section className="section">

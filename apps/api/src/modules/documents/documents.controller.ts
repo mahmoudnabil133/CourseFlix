@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   Get,
   Param,
@@ -32,6 +33,8 @@ export class DocumentsController {
   uploadDocument(
     @Param('courseId') courseId: string,
     @CurrentUser() user: AuthenticatedUser,
+    @Body('sectionId') sectionId: string | undefined,
+    @Body('lessonId') lessonId: string | undefined,
     @UploadedFile() file?: UploadedDocumentFile,
   ) {
     if (!file) {
@@ -43,6 +46,8 @@ export class DocumentsController {
       mimeType: file.mimetype,
       buffer: file.buffer,
       sizeBytes: file.size,
+      sectionId: sectionId || undefined,
+      lessonId: lessonId || undefined,
     });
   }
 

@@ -7,6 +7,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Test } from '@nestjs/testing';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { EnrollmentsService } from '../enrollments/enrollments.service';
+import { VideoIngestionService } from '../video-ingestion/video-ingestion.service';
 import { CoursesService } from './courses.service';
 import { CourseEntity } from './entities/course.entity';
 import { SectionEntity } from './entities/section.entity';
@@ -125,6 +126,9 @@ describe('CoursesService', () => {
       softRemove: jest.fn(),
     };
     enrollmentsService = { assertStudentEnrolled: jest.fn() };
+    const videoIngestionService = {
+      enqueueForVideo: jest.fn().mockResolvedValue(undefined),
+    };
 
     const moduleRef = await Test.createTestingModule({
       providers: [
@@ -146,6 +150,7 @@ describe('CoursesService', () => {
           useValue: videosRepository,
         },
         { provide: EnrollmentsService, useValue: enrollmentsService },
+        { provide: VideoIngestionService, useValue: videoIngestionService },
       ],
     }).compile();
 

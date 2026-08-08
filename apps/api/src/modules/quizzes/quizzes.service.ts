@@ -12,6 +12,10 @@ import {
   INTERVENTION_EVALUATOR_PORT,
   InterventionEvaluatorPort,
 } from '../../common/ports/intervention-evaluator.port';
+import {
+  NOTIFICATION_PRODUCER_PORT,
+  NotificationProducerPort,
+} from '../../common/ports/notification-producer.port';
 import { CourseEntity } from '../courses/entities/course.entity';
 import { EnrollmentsService } from '../enrollments/enrollments.service';
 import { QuestionEntity, QuestionType } from './entities/question.entity';
@@ -47,6 +51,7 @@ export interface QuizSummary {
   sectionId: string | null;
   lessonId: string | null;
   questionCount: number;
+  dueAt: string | null;
   submission: { score: number; total: number } | null;
 }
 
@@ -82,6 +87,8 @@ export class QuizzesService {
     private enrollmentsService: EnrollmentsService,
     @Inject(INTERVENTION_EVALUATOR_PORT)
     private interventionEvaluator: InterventionEvaluatorPort,
+    @Inject(NOTIFICATION_PRODUCER_PORT)
+    private notificationProducer: NotificationProducerPort,
   ) {}
 
   private async assertTeacherOwnsCourse(
@@ -113,7 +120,9 @@ export class QuizzesService {
     quizId: string,
     studentId: string,
   ): Promise<StudentQuizResponse> {
-    const quiz = await this.quizRepo.findOne({ where: { id: quizId } });
+    const quiz = await this.quizRepo.findOne({
+      where: { id: quizId, status: 'published' },
+    });
     if (!quiz) throw new NotFoundException('Quiz not found');
     await this.enrollmentsService.assertStudentEnrolled(
       studentId,
@@ -168,7 +177,9 @@ export class QuizzesService {
     total: number;
     answers: Array<{ questionId: string; isCorrect: boolean }>;
   }> {
-    const quiz = await this.quizRepo.findOne({ where: { id: quizId } });
+    const quiz = await this.quizRepo.findOne({
+      where: { id: quizId, status: 'published' },
+    });
     if (!quiz) throw new NotFoundException('Quiz not found');
     await this.enrollmentsService.assertStudentEnrolled(
       studentId,
@@ -266,7 +277,7 @@ export class QuizzesService {
     );
 
     const quizzes = await this.quizRepo.find({
-      where: { lessonId, deletedAt: IsNull() },
+      where: { lessonId, deletedAt: IsNull(), status: 'published' },
     });
     return this.buildSummaries(quizzes, studentId);
   }
@@ -285,7 +296,7 @@ export class QuizzesService {
     );
 
     const quizzes = await this.quizRepo.find({
-      where: { sectionId, deletedAt: IsNull() },
+      where: { sectionId, deletedAt: IsNull(), status: 'published' },
     });
     return this.buildSummaries(quizzes, studentId);
   }
@@ -301,7 +312,7 @@ export class QuizzesService {
     await this.enrollmentsService.assertStudentEnrolled(studentId, courseId);
 
     const quizzes = await this.quizRepo.find({
-      where: { courseId, deletedAt: IsNull() },
+      where: { courseId, deletedAt: IsNull(), status: 'published' },
       order: { createdAt: 'DESC' },
     });
     return this.buildSummaries(quizzes, studentId);
@@ -326,6 +337,7 @@ export class QuizzesService {
         sectionId: quiz.sectionId,
         lessonId: quiz.lessonId,
         questionCount: count,
+        dueAt: quiz.dueAt ? quiz.dueAt.toISOString() : null,
         submission: submission
           ? { score: Number(submission.score), total: count }
           : null,
@@ -370,8 +382,11 @@ export class QuizzesService {
   ): Promise<TeacherQuizResponse[]> {
     await this.assertTeacherOwnsCourse(teacherId, courseId);
 
+    // AI drafts awaiting review live in the exam-generation review screen,
+    // not here — they only show up in this list once the teacher accepts
+    // them (which flips them to 'published').
     const quizzes = await this.quizRepo.find({
-      where: { courseId, deletedAt: IsNull() },
+      where: { courseId, deletedAt: IsNull(), status: 'published' },
     });
 
     const results: TeacherQuizResponse[] = [];
@@ -439,6 +454,17 @@ export class QuizzesService {
         })),
       );
       await queryRunner.commitTransaction();
+
+      // Fire-and-forget, same as the intervention evaluator below — a
+      // notification hiccup must never fail the already-committed quiz.
+      this.notifyEnrolledStudents(dto.courseId, quiz.id, quiz.title).catch(
+        (error: unknown) => {
+          this.logger.warn(
+            `Quiz-ready notification failed for quiz=${quiz.id}: ${String(error)}`,
+          );
+        },
+      );
+
       return {
         id: quiz.id,
         title: quiz.title,
@@ -459,6 +485,29 @@ export class QuizzesService {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  // Notifies every actively enrolled student that a new quiz is
+  // available — used for manual creation here and for AI-generated
+  // quizzes in ExamGenerationService#accept.
+  private async notifyEnrolledStudents(
+    courseId: string,
+    quizId: string,
+    quizTitle: string,
+  ): Promise<void> {
+    const studentIds = await this.enrollmentsService.listActiveStudentIds(courseId);
+    await Promise.all(
+      studentIds.map((studentId) =>
+        this.notificationProducer.notify({
+          userId: studentId,
+          type: 'quiz_ready',
+          title: 'اختبار جديد متاح',
+          message: `اختبار جديد "${quizTitle}" متاح دلوقتي، جاهز للحل.`,
+          relatedEntityType: 'quiz',
+          relatedEntityId: quizId,
+        }),
+      ),
+    );
   }
 
   async updateQuiz(

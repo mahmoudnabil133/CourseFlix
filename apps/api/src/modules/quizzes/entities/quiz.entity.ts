@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 
 export type QuizGenerationType = 'manual' | 'rag_generated';
+export type QuizStatus = 'draft' | 'pending_review' | 'published' | 'rejected';
 
 @Entity({ name: 'quizzes' })
 export class QuizEntity {
@@ -29,6 +30,7 @@ export class QuizEntity {
     string | null;
 
   @Column({
+    name: 'generation_type',
     type: 'enum',
     enum: ['manual', 'rag_generated'],
     enumName: 'quiz_generation_type',
@@ -37,6 +39,20 @@ export class QuizEntity {
   generationType!: QuizGenerationType;
 
   @Column({ type: 'text' }) title!: string;
+
+  // AI-generated drafts start 'pending_review' and only become visible to
+  // students once the teacher accepts them; manually created quizzes stay
+  // 'published' immediately, same as before this column existed.
+  @Column({
+    type: 'enum',
+    enum: ['draft', 'pending_review', 'published', 'rejected'],
+    enumName: 'quiz_status',
+    default: 'published',
+  })
+  status!: QuizStatus;
+
+  @Column({ name: 'due_at', type: 'timestamptz', nullable: true })
+  dueAt!: Date | null;
 
   @Column({ type: 'integer', default: 1 }) version!: number;
 

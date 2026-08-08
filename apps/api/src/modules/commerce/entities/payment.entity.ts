@@ -39,6 +39,14 @@ export class PaymentEntity {
   @Column({ name: 'external_ref', type: 'text', nullable: true })
   externalRef!: string | null;
 
+  /**
+   * Paymob's order id for this attempt, kept so the GET redirect callback
+   * (which only carries Paymob's order id) can be mapped back to our order
+   * and course. Null for the deterministic test adapter.
+   */
+  @Column({ name: 'paymob_order_id', type: 'text', nullable: true })
+  paymobOrderId!: string | null;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;
 }

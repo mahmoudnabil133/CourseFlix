@@ -8,6 +8,9 @@
 #   ./dev.sh status     show what is currently running
 #   ./dev.sh logs       follow the API and web logs
 #
+# ngrok is auto-installed (if missing) and tunnels the API port so Paymob
+# callbacks can reach the local server: https://<subdomain>.ngrok-free.dev
+#
 # Flags (for the default "up" command):
 #   --no-seed           run migrations but skip seeding
 #   --no-infra          assume Postgres/Redis/Chroma are already running
@@ -22,6 +25,8 @@ API_LOG="$LOG_DIR/api.log"
 WEB_LOG="$LOG_DIR/web.log"
 WORKER_LOG="$LOG_DIR/worker.log"
 WORKER_PID_FILE="$LOG_DIR/worker.pid"
+NGROK_LOG="$LOG_DIR/ngrok.log"
+NGROK_PID_FILE="$LOG_DIR/ngrok.pid"
 
 API_PORT="${PORT:-}"
 WEB_PORT="${VITE_WEB_PORT:-}"
@@ -137,6 +142,137 @@ install_deps() {
       ok "apps/$app"
     fi
   done
+}
+
+# ─── ngrok tunnel ────────────────────────────────────────────────────────
+# Tunnels the local API so Paymob callbacks (POST/GET webhook) reach the
+# machine. Auto-installs ngrok if it isn't on PATH.
+NGROK_DOWNLOAD_BASE="https://bin.equinox.io/c/bNyj1mQVY4c"
+
+ngrok_arch() {
+  case "$(uname -s)-$(uname -m)" in
+    Linux-x86_64) echo "linux-amd64" ;;
+    Linux-aarch64) echo "linux-arm64" ;;
+    Darwin-x86_64) echo "darwin-amd64" ;;
+    Darwin-arm64) echo "darwin-arm64" ;;
+    *) echo "" ;;
+  esac
+}
+
+install_ngrok() {
+  local arch url dest
+  step "Installing ngrok"
+
+  arch="$(ngrok_arch)"
+  if [ -z "$arch" ]; then
+    warn "unsupported platform for ngrok auto-install: $(uname -s) $(uname -m)"
+    return 1
+  fi
+
+  dest="$HOME/.local/bin"
+  mkdir -p "$dest"
+  url="$NGROK_DOWNLOAD_BASE/ngrok-v3-stable-$arch.tgz"
+
+  printf '  downloading ngrok (%s) ...\n' "$arch"
+  if ! curl -fsSL "$url" -o "$LOG_DIR/ngrok.tgz"; then
+    warn "failed to download ngrok from $url"
+    return 1
+  fi
+  if ! tar -xzf "$LOG_DIR/ngrok.tgz" -C "$dest" ngrok; then
+    warn "failed to extract ngrok."
+    rm -f "$LOG_DIR/ngrok.tgz"
+    return 1
+  fi
+  rm -f "$LOG_DIR/ngrok.tgz"
+  chmod +x "$dest/ngrok"
+  ok "installed ngrok to $dest/ngrok"
+}
+
+# Note: every failure path here returns 1 instead of calling die() — see
+# start_ngrok()'s docblock. `ensure_ngrok` itself is used elsewhere for
+# nothing but the tunnel, so a soft failure here just means no tunnel.
+ensure_ngrok() {
+  if command -v ngrok >/dev/null 2>&1; then
+    ok "ngrok $(ngrok version | sed 's/^version //' || true)"
+    return 0
+  fi
+  install_ngrok || return 1
+  # `PATH=... command -v ngrok` only extends PATH for that one check, not
+  # for the rest of the script — so a freshly auto-installed binary would
+  # pass this probe but still fail to `exec` from start_ngrok(). Export it
+  # for real so every later `ngrok` invocation in this script can find it.
+  if [ -x "$HOME/.local/bin/ngrok" ]; then
+    export PATH="$HOME/.local/bin:$PATH"
+  fi
+  if ! command -v ngrok >/dev/null 2>&1; then
+    warn "ngrok installed but not on PATH ($HOME/.local/bin)"
+    return 1
+  fi
+}
+
+ngrok_public_url() {
+  curl -s --max-time 3 http://127.0.0.1:4040/api/tunnels 2>/dev/null \
+    | sed -n 's/.*"public_url":"\([^"]*ngrok[^"]*\)".*/\1/p' | head -n 1
+}
+
+start_ngrok() {
+  step "Starting ngrok tunnel (API port $API_PORT)"
+
+  # ngrok only exists here so Paymob's payment callbacks can reach this
+  # machine — nothing else in the stack (API, web, worker) depends on it.
+  # A flaky download or a platform ngrok doesn't support must never take
+  # down the rest of local dev, so every failure path below warns and
+  # returns instead of calling die().
+  if ! ensure_ngrok; then
+    warn "ngrok unavailable — continuing without a tunnel (Paymob callbacks won't reach this machine)"
+    return 0
+  fi
+
+  # Reuse an already-running tunnel for the same API port instead of
+  # spawning a duplicate (ngrok refuses to run twice against one agent).
+  if curl -sf --max-time 3 http://127.0.0.1:4040/api/tunnels >/dev/null 2>&1; then
+    local existing
+    existing="$(ngrok_public_url)"
+    if [ -n "$existing" ]; then
+      ok "ngrok already running — $existing -> http://localhost:$API_PORT"
+      return 0
+    fi
+  fi
+
+  free_port 4040
+
+  setsid ngrok http "$API_PORT" --log stdout > "$NGROK_LOG" 2>&1 < /dev/null &
+  echo "$!" > "$NGROK_PID_FILE"
+
+  printf '  waiting for ngrok tunnel'
+  local waited=0 url
+  until url="$(ngrok_public_url)" && [ -n "$url" ]; do
+    if [ "$waited" -ge 30 ]; then
+      printf '\n'
+      tail -5 "$NGROK_LOG" >&2
+      warn "ngrok did not start within 30s — continuing without a tunnel. See $NGROK_LOG"
+      return 0
+    fi
+    printf '.'
+    sleep 1
+    waited=$((waited + 1))
+  done
+  printf '\n'
+  ok "ngrok tunnel ready — $url -> http://localhost:$API_PORT"
+}
+
+stop_ngrok() {
+  if [ -f "$NGROK_PID_FILE" ]; then
+    local pid
+    pid="$(cat "$NGROK_PID_FILE" 2>/dev/null || true)"
+    if [ -n "$pid" ] && ps -p "$pid" >/dev/null 2>&1; then
+      stop_pid_group "$pid"
+      rm -f "$NGROK_PID_FILE"
+      ok "stopped ngrok"
+      return
+    fi
+  fi
+  ok "ngrok was not running"
 }
 
 # ─── infrastructure ──────────────────────────────────────────────────────
@@ -325,6 +461,8 @@ start_apps() {
   wait_for_http "http://localhost:$API_PORT/api/v1/health" "API"
   ok "API listening on http://localhost:$API_PORT"
 
+  start_ngrok
+
   setsid npm run dev --prefix apps/web > "$WEB_LOG" 2>&1 < /dev/null &
   wait_for_http "http://localhost:$WEB_PORT" "web app"
   ok "web app listening on http://localhost:$WEB_PORT"
@@ -353,8 +491,9 @@ print_summary() {
   student_email="$(grep -E '^SEED_STUDENT_EMAIL=' .env | cut -d= -f2-)"
   student_password="$(grep -E '^SEED_STUDENT_PASSWORD=' .env | cut -d= -f2-)"
 
-  local db_health
+  local db_health ngrok_url
   db_health="$(curl -s "http://localhost:$API_PORT/api/v1/health" || echo '{}')"
+  ngrok_url="$(ngrok_public_url || true)"
 
   cat <<EOF
 
@@ -378,8 +517,12 @@ ${GREEN}${BOLD}CourseFlix is running.${RESET}
     Chroma         http://localhost:${CHROMA_PORT:-8000}
     worker         PDF ingestion jobs
 
+  ${BOLD}Paymob callbacks${RESET}
+    ngrok tunnel   ${ngrok_url:-not running}
+    webhook        $ngrok_url/api/v1/paymob/webhook
+
   ${BOLD}Logs${RESET}
-    ./dev.sh logs  ${DIM}(or tail $API_LOG / $WEB_LOG / $WORKER_LOG)${RESET}
+    ./dev.sh logs  ${DIM}(or tail $API_LOG / $WEB_LOG / $WORKER_LOG / $NGROK_LOG)${RESET}
 
   ${BOLD}Stop${RESET}
     ./dev.sh stop
@@ -426,6 +569,8 @@ cmd_stop() {
     fi
   done
 
+  stop_ngrok
+
   step "Stopping infrastructure"
   detect_docker
   compose down >/dev/null 2>&1
@@ -468,12 +613,16 @@ cmd_status() {
   else
     warn "worker not running"
   fi
+
+  local ngrok_url
+  ngrok_url="$(ngrok_public_url || true)"
+  if [ -n "$ngrok_url" ]; then ok "ngrok tunnel $ngrok_url"; else warn "ngrok not running"; fi
 }
 
 cmd_logs() {
   [ -f "$API_LOG" ] || die "no logs yet — run ./dev.sh first."
-  step "Following API and web logs (Ctrl+C to stop)"
-  tail -f "$API_LOG" "$WEB_LOG" "$WORKER_LOG"
+  step "Following API, web and worker logs (Ctrl+C to stop)"
+  tail -f "$API_LOG" "$WEB_LOG" "$WORKER_LOG" "$NGROK_LOG"
 }
 
 # ─── entrypoint ──────────────────────────────────────────────────────────

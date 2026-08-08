@@ -8,6 +8,11 @@ type EmptyStateProps = {
   actionLabel?: string
   onAction?: () => void
   variant?: EmptyStateVariant
+  // Set when this is the page's only content (a list/table with zero
+  // rows) — fills and centers within the full page instead of the
+  // compact size used when it's one section among several (e.g. a
+  // dashboard's "recent courses" panel below other content).
+  fullPage?: boolean
 }
 
 const variantIllustrations: Record<string, string> = {
@@ -22,18 +27,19 @@ export function EmptyState({
   actionLabel,
   onAction,
   variant = 'default',
+  fullPage = false,
 }: EmptyStateProps) {
   const illustrationSrc = variantIllustrations[variant]
   const isNotifications = variant === 'notifications'
 
   return (
-    <div className="empty-state" role="status">
+    <div className={`empty-state${fullPage ? ' empty-state--full-page' : ''}`} role="status">
       {/* Illustration or icon inside circular container */}
       <div className={`empty-state__blob${isNotifications ? ' empty-state__blob--icon' : ''}`}>
         {isNotifications ? (
           <div className="empty-state__icon-wrap">
             <BellOff
-              size={48}
+              size={58}
               strokeWidth={1.5}
               aria-hidden="true"
               className="empty-state__icon"
@@ -78,10 +84,21 @@ export function EmptyState({
           text-align: center;
         }
 
+        /* Fill the page, not just the width its own content needs — same
+           min-height/width ErrorState already uses, so a genuinely empty
+           page reads as a real full-screen state instead of a small icon
+           stuck wherever it fell in the flow. Only applied when this is
+           the page's sole content (fullPage prop) — a dashboard's inline
+           "no recent courses yet" panel stays compact. */
+        .empty-state--full-page {
+          min-height: 60vh;
+          width: 100%;
+        }
+
         /* Circular blob container behind the illustration */
         .empty-state__blob {
-          width: 200px;
-          height: 200px;
+          width: 240px;
+          height: 240px;
           border-radius: 50%;
           overflow: hidden;
           display: flex;

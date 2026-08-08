@@ -11,6 +11,7 @@ export const ANALYTICS_SCHEMA_VERSION = 1
 // Adding a new event means adding it here first.
 export type AnalyticsEventName =
   | 'checkout_start'
+  | 'checkout_redirect'
   | 'purchase'
   | 'checkout_error'
   | 'intervention_created'

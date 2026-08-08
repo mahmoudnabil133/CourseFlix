@@ -1,7 +1,8 @@
-import { Fragment } from 'react'
+import { Fragment, useState } from 'react'
 import { Link } from 'react-router'
 import { EmptyState } from '../../../shared/components/EmptyState'
 import { COURSE_STATUS } from '../../../shared/lib/status-labels'
+import { StudentDocumentsList } from '../../course-documents/components/StudentDocumentsList'
 import type { QuizSummary } from '../../quizzes/types/quiz.types'
 import type { CourseDetail } from '../types/course.types'
 
@@ -24,6 +25,7 @@ export function CourseDetailView({
   areQuizzesLoading = false,
   quizzesError = false,
 }: CourseDetailViewProps) {
+  const [activeMediaTab, setActiveMediaTab] = useState<'videos' | 'files'>('videos')
   const lessonCount = course.sections.reduce(
     (total, section) => total + section.lessons.length,
     0,
@@ -39,6 +41,68 @@ export function CourseDetailView({
   function quizzesForSection(sectionId: string): QuizSummary[] {
     return visibleQuizzes.filter((quiz) => quiz.sectionId === sectionId && !quiz.lessonId)
   }
+
+  const videosSection =
+    course.sections.length === 0 ? (
+      <EmptyState
+        title="لسه مفيش محتوى في الدورة دي"
+        message="لما يتم إضافة أقسام ودروس هتظهر هنا"
+      />
+    ) : (
+      course.sections.map((section) => (
+        <section key={section.id} className="section">
+          <div className="section-head">
+            <h2>{section.title}</h2>
+          </div>
+
+          {section.lessons.length === 0 ? (
+            <p className="subtitle">لا يوجد دروس في هذا القسم بعد</p>
+          ) : (
+            <div className="list">
+              {section.lessons.map((lesson) => {
+                const lessonPath = course.canEdit
+                  ? `/teacher/lessons/${lesson.id}`
+                  : `/student/lessons/${lesson.id}`
+                const canOpenLesson = !course.canEdit || Boolean(lesson.videoUrl)
+                const lessonQuizzes = quizzesForLesson(lesson.id)
+
+                return (
+                  <Fragment key={lesson.id}>
+                    {canOpenLesson ? (
+                      <Link to={lessonPath} className="list-item">
+                        <span className="lead">
+                          <span className="ms">play_circle</span>
+                        </span>
+                        <span className="body">
+                          <span className="t">{lesson.title}</span>
+                          {course.canEdit && <span className="s">فتح الدرس ومتابعة محتوى الكورس</span>}
+                        </span>
+                      </Link>
+                    ) : (
+                      <div className="list-item">
+                        <span className="lead">
+                          <span className="ms">play_circle</span>
+                        </span>
+                        <span className="body">
+                          <span className="t">{lesson.title}</span>
+                          <span className="s">أضف رابط فيديو عشان تفتح المعاينة</span>
+                        </span>
+                      </div>
+                    )}
+                    {lessonQuizzes.map((quiz) => (
+                      <QuizListItem key={quiz.id} quiz={quiz} contextLabel="اختبار بعد الدرس" />
+                    ))}
+                  </Fragment>
+                )
+              })}
+              {quizzesForSection(section.id).map((quiz) => (
+                <QuizListItem key={quiz.id} quiz={quiz} contextLabel="اختبار القسم" />
+              ))}
+            </div>
+          )}
+        </section>
+      ))
+    )
 
   return (
     <>
@@ -70,65 +134,33 @@ export function CourseDetailView({
 
       {course.description && <p className="subtitle">{course.description}</p>}
 
-      {course.sections.length === 0 ? (
-        <EmptyState
-          title="لسه مفيش محتوى في الدورة دي"
-          message="لما يتم إضافة أقسام ودروس هتظهر هنا"
-        />
+      {course.canEdit ? (
+        videosSection
       ) : (
-        course.sections.map((section) => (
-          <section key={section.id} className="section">
-            <div className="section-head">
-              <h2>{section.title}</h2>
-            </div>
+        <>
+          <div className="tabs" role="tablist">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeMediaTab === 'videos'}
+              onClick={() => setActiveMediaTab('videos')}
+              className={`tab${activeMediaTab === 'videos' ? ' active' : ''}`}
+            >
+              فيديوهات
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeMediaTab === 'files'}
+              onClick={() => setActiveMediaTab('files')}
+              className={`tab${activeMediaTab === 'files' ? ' active' : ''}`}
+            >
+              ملفات
+            </button>
+          </div>
 
-            {section.lessons.length === 0 ? (
-              <p className="subtitle">لا يوجد دروس في هذا القسم بعد</p>
-            ) : (
-              <div className="list">
-                {section.lessons.map((lesson) => {
-                  const lessonPath = course.canEdit
-                    ? `/teacher/lessons/${lesson.id}`
-                    : `/student/lessons/${lesson.id}`
-                  const canOpenLesson = !course.canEdit || Boolean(lesson.videoUrl)
-                  const lessonQuizzes = quizzesForLesson(lesson.id)
-
-                  return (
-                    <Fragment key={lesson.id}>
-                      {canOpenLesson ? (
-                        <Link to={lessonPath} className="list-item">
-                          <span className="lead">
-                            <span className="ms">play_circle</span>
-                          </span>
-                          <span className="body">
-                            <span className="t">{lesson.title}</span>
-                            {course.canEdit && <span className="s">فتح الدرس ومتابعة محتوى الكورس</span>}
-                          </span>
-                        </Link>
-                      ) : (
-                        <div className="list-item">
-                          <span className="lead">
-                            <span className="ms">play_circle</span>
-                          </span>
-                          <span className="body">
-                            <span className="t">{lesson.title}</span>
-                            <span className="s">أضف رابط فيديو عشان تفتح المعاينة</span>
-                          </span>
-                        </div>
-                      )}
-                      {lessonQuizzes.map((quiz) => (
-                        <QuizListItem key={quiz.id} quiz={quiz} contextLabel="اختبار بعد الدرس" />
-                      ))}
-                    </Fragment>
-                  )
-                })}
-                {quizzesForSection(section.id).map((quiz) => (
-                  <QuizListItem key={quiz.id} quiz={quiz} contextLabel="اختبار القسم" />
-                ))}
-              </div>
-            )}
-          </section>
-        ))
+          {activeMediaTab === 'videos' ? videosSection : <StudentDocumentsList courseId={course.id} />}
+        </>
       )}
 
       {!course.canEdit && areQuizzesLoading && (

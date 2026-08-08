@@ -114,6 +114,10 @@ export const handlers = [
     }),
   ),
 
+  http.get(apiUrl("/student/videos/:videoId/qa-status"), () =>
+    HttpResponse.json({ status: "not_available" }),
+  ),
+
   http.get(apiUrl("/teacher/lessons/:lessonId/player"), ({ params }) =>
     HttpResponse.json({
       id: params.lessonId,
@@ -196,9 +200,14 @@ export const handlers = [
         sectionId: "section-1",
         lessonId: "lesson-1",
         questionCount: 2,
+        dueAt: null,
         submission: null,
       },
     ]),
+  ),
+
+  http.get(apiUrl("/student/courses/:courseId/documents"), () =>
+    HttpResponse.json([]),
   ),
 
   http.get(apiUrl("/teacher/courses/:courseId/quizzes"), () =>

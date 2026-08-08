@@ -32,6 +32,8 @@ export class QuestionEntity {
 
   @Column({ name: 'correct_answer', type: 'text' }) correctAnswer!: string;
 
+  @Column({ type: 'text', nullable: true }) difficulty!: string | null;
+
   @DeleteDateColumn({ name: 'deleted_at', type: 'timestamptz', nullable: true })
   deletedAt!: Date | null;
 

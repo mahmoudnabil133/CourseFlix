@@ -61,10 +61,25 @@ async function requestMultipart<T>(
   return parseResponse<T>(response)
 }
 
+// For endpoints that return a binary body (file downloads) instead of JSON —
+// same credentials/error-handling as request(), but resolves to a Blob.
+async function requestBlob(path: string): Promise<Blob> {
+  const response = await fetch(new URL(`${env.apiBaseUrl}${path}`), {
+    credentials: 'include',
+  })
+
+  if (!response.ok) {
+    throw new ApiError('Request failed', response.status, await response.json().catch(() => null))
+  }
+
+  return response.blob()
+}
+
 export const httpClient = {
   get: <T>(path: string, options?: RequestOptions) => request<T>('GET', path, options),
   post: <T>(path: string, body?: JsonValue | object) => request<T>('POST', path, { body }),
   patch: <T>(path: string, body?: JsonValue | object) => request<T>('PATCH', path, { body }),
   delete: <T>(path: string) => request<T>('DELETE', path),
   postMultipart: <T>(path: string, formData: FormData) => requestMultipart<T>('POST', path, formData),
+  getBlob: (path: string) => requestBlob(path),
 }

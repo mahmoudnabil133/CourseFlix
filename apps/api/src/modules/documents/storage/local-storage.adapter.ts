@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 
 export interface StoredFile {
@@ -14,6 +14,11 @@ export interface StoredFile {
  */
 export interface StorageAdapter {
   save(buffer: Buffer): Promise<StoredFile>;
+  // Admin-only read path (moderation download) — `storagePath` always
+  // comes from a `files` row already resolved via `FileEntity`, never
+  // from unvalidated user input, so this doesn't reopen the path-
+  // traversal concern `save()`'s docblock describes.
+  read(storagePath: string): Promise<Buffer>;
 }
 
 export const STORAGE_ADAPTER = Symbol('STORAGE_ADAPTER');
@@ -37,5 +42,9 @@ export class LocalStorageAdapter implements StorageAdapter {
     const storagePath = join(this.root, key);
     await writeFile(storagePath, buffer);
     return { storageProvider: 'local', storagePath };
+  }
+
+  read(storagePath: string): Promise<Buffer> {
+    return readFile(storagePath);
   }
 }

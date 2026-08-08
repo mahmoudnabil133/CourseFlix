@@ -1,12 +1,18 @@
 import { ConfigService } from '@nestjs/config';
-import type { RetrievedChunk } from '../../../common/ports/retrieval.port';
+import type {
+  RetrievedChunk,
+  RetrievedVideoChunk,
+} from '../../../common/ports/retrieval.port';
 
 export const LLM_PROVIDER = Symbol('LLM_PROVIDER');
 
 export interface LlmGenerateInput {
   prompt: string;
   question: string;
-  chunks: RetrievedChunk[];
+  // Course-document chunks (Tutor) or video-transcript chunks (Video Q&A) —
+  // only `chunkId`/`excerpt` are used here, but the full union is kept so
+  // callers don't need to reshape either retrieval result.
+  chunks: RetrievedChunk[] | RetrievedVideoChunk[];
 }
 
 export interface LlmGenerateResult {
