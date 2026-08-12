@@ -18,7 +18,8 @@ export class QuestionSpecItemDto {
 
 export class CreateExamGenerationRequestDto {
   @IsUUID() courseId!: string;
-  @IsIn(['lesson', 'section', 'course']) scopeType!: 'lesson' | 'section' | 'course';
+  @IsIn(['lesson', 'section', 'course']) scopeType!:
+    'lesson' | 'section' | 'course';
   // Required for 'lesson'/'section', ignored (server derives it from
   // courseId) for 'course' — see ExamGenerationService#resolveAndValidateScope.
   @IsOptional() @IsUUID() scopeId?: string;

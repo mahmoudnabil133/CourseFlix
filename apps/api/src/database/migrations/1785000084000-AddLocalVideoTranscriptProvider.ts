@@ -12,9 +12,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * the value — nothing here reads it — so the default transactional
  * migration runner is fine.
  */
-export class AddLocalVideoTranscriptProvider1785000084000
-  implements MigrationInterface
-{
+export class AddLocalVideoTranscriptProvider1785000084000 implements MigrationInterface {
   name = 'AddLocalVideoTranscriptProvider1785000084000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

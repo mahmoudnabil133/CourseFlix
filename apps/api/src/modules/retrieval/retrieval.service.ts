@@ -117,13 +117,13 @@ export class RetrievalService implements RetrievalPort {
       queryEmbeddings: [queryVector],
       nResults: topK,
       where: {
-        $and: [{ courseId } as Record<string, string>, { isActive: true }],
+        $and: [{ courseId }, { isActive: true }],
       },
     };
 
     const queryResponse = (await this.queryCollectionWithRetry(
       chromaQuery,
-    )) as unknown as ChromaQueryResult;
+    )) as ChromaQueryResult;
 
     const ids = queryResponse.ids?.[0] || [];
     const distances = queryResponse.distances?.[0] || [];
@@ -184,7 +184,9 @@ export class RetrievalService implements RetrievalPort {
    * Joins retrieved vector IDs with Postgres `video_chunks` to populate
    * exact `startSeconds`/`endSeconds` citation data.
    */
-  async searchVideo(input: SearchVideoQueryInput): Promise<RetrievedVideoChunk[]> {
+  async searchVideo(
+    input: SearchVideoQueryInput,
+  ): Promise<RetrievedVideoChunk[]> {
     const { videoTranscriptId, query, topK = 5 } = input;
 
     if (!videoTranscriptId) {
@@ -205,16 +207,13 @@ export class RetrievalService implements RetrievalPort {
       queryEmbeddings: [queryVector],
       nResults: topK,
       where: {
-        $and: [
-          { videoTranscriptId } as Record<string, string>,
-          { isActive: true },
-        ],
+        $and: [{ videoTranscriptId }, { isActive: true }],
       },
     };
 
     const queryResponse = (await this.queryCollectionWithRetry(
       chromaQuery,
-    )) as unknown as ChromaQueryResult;
+    )) as ChromaQueryResult;
 
     const ids = queryResponse.ids?.[0] || [];
     const distances = queryResponse.distances?.[0] || [];

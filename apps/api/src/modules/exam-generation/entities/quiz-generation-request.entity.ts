@@ -57,7 +57,14 @@ export class QuizGenerationRequestEntity {
 
   @Column({
     type: 'enum',
-    enum: ['queued', 'processing', 'pending_review', 'accepted', 'rejected', 'failed'],
+    enum: [
+      'queued',
+      'processing',
+      'pending_review',
+      'accepted',
+      'rejected',
+      'failed',
+    ],
     enumName: 'quiz_generation_request_status',
     default: 'queued',
   })

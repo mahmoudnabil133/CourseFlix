@@ -74,9 +74,12 @@ export async function backfillVideoTranscripts(
     for (const video of videos) {
       const transcript = transcriptByVideoId.get(video.id);
       const isForcedRealVideo =
-        Boolean(options.forceNonSeedVideos) && !SEED_VIDEO_URLS.has(video.videoUrl);
+        Boolean(options.forceNonSeedVideos) &&
+        !SEED_VIDEO_URLS.has(video.videoUrl);
       const needsIngestion =
-        isForcedRealVideo || !transcript || transcript.processingStatus === 'failed';
+        isForcedRealVideo ||
+        !transcript ||
+        transcript.processingStatus === 'failed';
 
       if (!needsIngestion) {
         skipped += 1;

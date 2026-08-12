@@ -82,7 +82,9 @@ function getDirectTutorIntent(question: string): TutorDirectIntent {
     return 'identity';
   }
 
-  if (EXPLICIT_OUT_OF_SCOPE_PATTERNS.some((pattern) => pattern.test(question))) {
+  if (
+    EXPLICIT_OUT_OF_SCOPE_PATTERNS.some((pattern) => pattern.test(question))
+  ) {
     return 'out_of_scope';
   }
 
@@ -338,7 +340,10 @@ export class TutorService {
     });
   }
 
-  private async persistDirectAnswer(conversationId: string, messageText: string) {
+  private async persistDirectAnswer(
+    conversationId: string,
+    messageText: string,
+  ) {
     return this.conversationsService.saveMessage({
       conversationId,
       senderType: 'ai_tutor',

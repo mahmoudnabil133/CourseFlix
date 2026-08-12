@@ -21,7 +21,7 @@ export class StudentCountIntentHandler implements AnalyticsIntentHandler {
   async handle(
     context: AnalyticsIntentContext,
   ): Promise<AnalyticsIntentResult> {
-    const row = (await this.enrollmentsRepository
+    const row = await this.enrollmentsRepository
       .createQueryBuilder('enrollment')
       .innerJoin(
         CourseEntity,
@@ -33,9 +33,7 @@ export class StudentCountIntentHandler implements AnalyticsIntentHandler {
       .addSelect('COUNT(DISTINCT enrollment.student_id)', 'activeStudentCount')
       .where('enrollment.status = :status', { status: 'active' })
       .andWhere('enrollment.deleted_at IS NULL')
-      .getRawOne()) as
-      | { enrollmentCount?: string; activeStudentCount?: string }
-      | undefined;
+      .getRawOne();
 
     return {
       intent: this.name,

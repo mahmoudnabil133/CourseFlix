@@ -27,7 +27,10 @@ import {
   EnrollmentEntity,
   EnrollmentStatus,
 } from '../enrollments/entities/enrollment.entity';
-import { LessonsService, type LessonDetailResponse } from '../lessons/lessons.service';
+import {
+  LessonsService,
+  type LessonDetailResponse,
+} from '../lessons/lessons.service';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { CreateCourseDto } from '../courses/dto/create-course.dto';
 import { CreateSectionDto } from '../courses/dto/create-section.dto';
@@ -281,13 +284,16 @@ export class TeacherService {
       where: { studentId, courseId, deletedAt: IsNull() },
     });
     if (!enrollment) {
-      throw new NotFoundException('This student is not enrolled in this course.');
+      throw new NotFoundException(
+        'This student is not enrolled in this course.',
+      );
     }
 
     enrollment.status = status;
     enrollment.statusChangedBy = 'teacher';
     enrollment.suspendedAt = status === 'suspended' ? new Date() : null;
-    enrollment.suspendedReason = status === 'suspended' ? (reason ?? null) : null;
+    enrollment.suspendedReason =
+      status === 'suspended' ? (reason ?? null) : null;
     await this.teacherEnrollmentsRepository.save(enrollment);
 
     await this.notificationPort.notify({

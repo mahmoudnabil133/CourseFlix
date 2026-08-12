@@ -19,9 +19,9 @@ describe('AnswerPolicyService', () => {
 
     const service = new AnswerPolicyService(configService);
 
-    expect(
-      service.getRelevantChunks([makeChunk(1.2), makeChunk(1.4)]),
-    ).toEqual([makeChunk(1.2)]);
+    expect(service.getRelevantChunks([makeChunk(1.2), makeChunk(1.4)])).toEqual(
+      [makeChunk(1.2)],
+    );
   });
 
   it('honors TUTOR_MAX_DISTANCE overrides', () => {
@@ -33,8 +33,8 @@ describe('AnswerPolicyService', () => {
 
     const service = new AnswerPolicyService(configService);
 
-    expect(
-      service.getRelevantChunks([makeChunk(0.4), makeChunk(0.6)]),
-    ).toEqual([makeChunk(0.4)]);
+    expect(service.getRelevantChunks([makeChunk(0.4), makeChunk(0.6)])).toEqual(
+      [makeChunk(0.4)],
+    );
   });
 });

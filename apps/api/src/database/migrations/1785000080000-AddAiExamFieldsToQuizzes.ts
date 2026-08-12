@@ -40,9 +40,15 @@ export class AddAiExamFieldsToQuizzes1785000080000 implements MigrationInterface
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`ALTER TABLE "questions" DROP COLUMN IF EXISTS "difficulty";`);
-    await queryRunner.query(`ALTER TABLE "quizzes" DROP COLUMN IF EXISTS "due_at";`);
-    await queryRunner.query(`ALTER TABLE "quizzes" DROP COLUMN IF EXISTS "status";`);
+    await queryRunner.query(
+      `ALTER TABLE "questions" DROP COLUMN IF EXISTS "difficulty";`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "quizzes" DROP COLUMN IF EXISTS "due_at";`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "quizzes" DROP COLUMN IF EXISTS "status";`,
+    );
     await queryRunner.query(`DROP TYPE IF EXISTS "quiz_status";`);
   }
 }

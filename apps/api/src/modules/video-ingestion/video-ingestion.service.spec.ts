@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/unbound-method */
 import { Repository } from 'typeorm';
 import { JobsService } from '../jobs/jobs.service';
 import { VideoEntity } from '../lessons/entities/video.entity';
@@ -30,7 +29,9 @@ describe('VideoIngestionService', () => {
         ),
     };
     jobsService = {
-      enqueueVideoIngestion: jest.fn().mockResolvedValue('video-ingest:transcript-1:v1'),
+      enqueueVideoIngestion: jest
+        .fn()
+        .mockResolvedValue('video-ingest:transcript-1:v1'),
     };
 
     service = new VideoIngestionService(
@@ -43,7 +44,7 @@ describe('VideoIngestionService', () => {
     await service.enqueueForVideo({
       ...video,
       videoUrl: 'https://www.youtube.com/watch?v=abc123',
-    } as VideoEntity);
+    });
 
     expect(transcriptsRepository.save).toHaveBeenCalledWith(
       expect.objectContaining({ provider: 'youtube' }),
@@ -58,7 +59,7 @@ describe('VideoIngestionService', () => {
     await service.enqueueForVideo({
       ...video,
       videoUrl: 'https://iframe.mediadelivery.net/embed/123/guid',
-    } as VideoEntity);
+    });
 
     expect(transcriptsRepository.save).toHaveBeenCalledWith(
       expect.objectContaining({ provider: 'bunny' }),
@@ -69,7 +70,7 @@ describe('VideoIngestionService', () => {
     await service.enqueueForVideo({
       ...video,
       videoUrl: 'https://cdn.example.com/lectures/lesson-1.mp4',
-    } as VideoEntity);
+    });
 
     expect(transcriptsRepository.save).toHaveBeenCalledWith(
       expect.objectContaining({ provider: 'local' }),
@@ -84,7 +85,7 @@ describe('VideoIngestionService', () => {
     await service.enqueueForVideo({
       ...video,
       videoUrl: 'not-a-url',
-    } as VideoEntity);
+    });
 
     expect(transcriptsRepository.save).not.toHaveBeenCalled();
     expect(jobsService.enqueueVideoIngestion).not.toHaveBeenCalled();

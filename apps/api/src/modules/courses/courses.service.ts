@@ -40,7 +40,9 @@ function slugify(title: string): string {
 }
 
 function extractIframeSrc(input: string): string | null {
-  const match = input.match(/<iframe\b[^>]*\bsrc\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\s>]+))/i);
+  const match = input.match(
+    /<iframe\b[^>]*\bsrc\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\s>]+))/i,
+  );
   return match?.[1] ?? match?.[2] ?? match?.[3] ?? null;
 }
 
@@ -50,7 +52,9 @@ function isBunnyStreamPlayerHost(hostname: string): boolean {
   );
 }
 
-function normalizeLessonVideoUrl(input: string | null | undefined): string | null {
+function normalizeLessonVideoUrl(
+  input: string | null | undefined,
+): string | null {
   const raw = input?.trim();
   if (!raw) {
     return null;
@@ -58,7 +62,9 @@ function normalizeLessonVideoUrl(input: string | null | undefined): string | nul
 
   const candidate = raw.includes('<iframe') ? extractIframeSrc(raw) : raw;
   if (!candidate) {
-    throw new BadRequestException('Video embed code must contain an iframe src.');
+    throw new BadRequestException(
+      'Video embed code must contain an iframe src.',
+    );
   }
 
   const normalizedCandidate = candidate.replaceAll('&amp;', '&').trim();
@@ -75,7 +81,9 @@ function normalizeLessonVideoUrl(input: string | null | undefined): string | nul
 
   if (raw.includes('<iframe')) {
     if (!isBunnyStreamPlayerHost(parsed.hostname)) {
-      throw new BadRequestException('Only Bunny Stream player embeds are supported.');
+      throw new BadRequestException(
+        'Only Bunny Stream player embeds are supported.',
+      );
     }
   }
 
@@ -132,7 +140,9 @@ export class CoursesService {
   // the only way a student can discover a course to buy in the first
   // place, so it stays lightweight (no sections/lessons/videoUrl) and
   // published-only rather than reusing toDetailDto.
-  async listCatalog(viewer: AuthenticatedUser): Promise<CourseCatalogItemDto[]> {
+  async listCatalog(
+    viewer: AuthenticatedUser,
+  ): Promise<CourseCatalogItemDto[]> {
     const courses = await this.coursesRepository.find({
       where: { status: 'published' },
       relations: { teacher: true },
@@ -487,11 +497,13 @@ export class CoursesService {
     // Fire-and-forget: caption ingestion must never block saving the
     // lesson. A provider fetch failure lands on the video_transcripts
     // row, not here.
-    this.videoIngestionService.enqueueForVideo(savedVideo).catch((error: unknown) => {
-      this.logger.warn(
-        `Video ingestion enqueue failed for video=${savedVideo.id}: ${String(error)}`,
-      );
-    });
+    this.videoIngestionService
+      .enqueueForVideo(savedVideo)
+      .catch((error: unknown) => {
+        this.logger.warn(
+          `Video ingestion enqueue failed for video=${savedVideo.id}: ${String(error)}`,
+        );
+      });
   }
 
   private async syncLessonVideoMetadata(lesson: LessonEntity): Promise<void> {

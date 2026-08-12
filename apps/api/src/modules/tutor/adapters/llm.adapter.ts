@@ -92,16 +92,32 @@ export class OpenAILlmProvider implements LlmProvider {
           {
             role: 'system',
             content:
-              'Return only compact JSON with keys answer and citedChunkIds. citedChunkIds must contain only chunk_id values provided in the prompt.',
+              'أجب باللغة العربية فقط واعتمد حصراً على المادة المرفوعة. كل معرّف في citedChunkIds يجب أن يكون من قيم chunk_id المذكورة في السؤال، ولا تخترع أي إجابة غير مدعومة بالمادة.',
           },
           {
             role: 'user',
-            content: `${input.prompt}
-
-Return JSON in this exact shape:
-{"answer":"Arabic answer grounded only in the material","citedChunkIds":["chunk-id"]}`,
+            content: input.prompt,
           },
         ],
+        text: {
+          format: {
+            type: 'json_schema',
+            name: 'grounded_tutor_answer',
+            strict: true,
+            schema: {
+              type: 'object',
+              properties: {
+                answer: { type: 'string' },
+                citedChunkIds: {
+                  type: 'array',
+                  items: { type: 'string' },
+                },
+              },
+              required: ['answer', 'citedChunkIds'],
+              additionalProperties: false,
+            },
+          },
+        },
         max_output_tokens: 700,
       }),
     });
@@ -134,6 +150,16 @@ Return JSON in this exact shape:
   }
 
   private extractOutputText(payload: OpenAIResponsePayload): string {
+    if (
+      payload.output?.some(
+        (item) => item.type === 'refusal' || item.type === 'refusal_item',
+      )
+    ) {
+      throw new Error(
+        'OpenAI tutor returned a refusal; no answer was generated.',
+      );
+    }
+
     if (payload.output_text) {
       return payload.output_text;
     }

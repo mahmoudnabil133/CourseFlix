@@ -87,7 +87,11 @@ export class CreateQuizGenerationRequests1785000081000 implements MigrationInter
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`DROP TABLE IF EXISTS "quiz_generation_feedback";`);
     await queryRunner.query(`DROP TABLE IF EXISTS "quiz_generation_requests";`);
-    await queryRunner.query(`DROP TYPE IF EXISTS "quiz_generation_request_status";`);
-    await queryRunner.query(`DROP TYPE IF EXISTS "quiz_generation_scope_type";`);
+    await queryRunner.query(
+      `DROP TYPE IF EXISTS "quiz_generation_request_status";`,
+    );
+    await queryRunner.query(
+      `DROP TYPE IF EXISTS "quiz_generation_scope_type";`,
+    );
   }
 }

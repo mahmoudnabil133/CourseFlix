@@ -96,7 +96,9 @@ export class ExamGenerationService {
 
     const dueAt = new Date(dto.dueAt);
     if (Number.isNaN(dueAt.getTime()) || dueAt.getTime() <= Date.now()) {
-      throw new BadRequestException('الديدلاين يجب أن يكون تاريخًا في المستقبل.');
+      throw new BadRequestException(
+        'الديدلاين يجب أن يكون تاريخًا في المستقبل.',
+      );
     }
 
     const request = await this.requestRepo.save(
@@ -182,7 +184,8 @@ export class ExamGenerationService {
     quizTitle: string,
   ): Promise<void> {
     try {
-      const studentIds = await this.enrollmentsService.listActiveStudentIds(courseId);
+      const studentIds =
+        await this.enrollmentsService.listActiveStudentIds(courseId);
       await Promise.all(
         studentIds.map((studentId) =>
           this.notificationProducer.notify({
@@ -261,7 +264,9 @@ export class ExamGenerationService {
     const questions = await this.questionRepo.find({
       where: { id: In(links.map((link) => link.questionId)) },
     });
-    const questionMap = new Map(questions.map((question) => [question.id, question]));
+    const questionMap = new Map(
+      questions.map((question) => [question.id, question]),
+    );
 
     return {
       title: quiz.title,
@@ -284,7 +289,9 @@ export class ExamGenerationService {
     requestId: string,
     teacherId: string,
   ): Promise<QuizGenerationRequestEntity> {
-    const request = await this.requestRepo.findOne({ where: { id: requestId } });
+    const request = await this.requestRepo.findOne({
+      where: { id: requestId },
+    });
     if (!request) throw new NotFoundException('Request not found');
     if (request.teacherId !== teacherId) {
       throw new ForbiddenException('You do not own this request');
@@ -324,13 +331,15 @@ export class ExamGenerationService {
       const section = await this.sectionsRepo.findOne({
         where: { id: scopeId, courseId, deletedAt: IsNull() },
       });
-      if (!section) throw new NotFoundException('Section not found in this course.');
+      if (!section)
+        throw new NotFoundException('Section not found in this course.');
       return section.id;
     }
     const lesson = await this.lessonsRepo.findOne({
       where: { id: scopeId, courseId, deletedAt: IsNull() },
     });
-    if (!lesson) throw new NotFoundException('Lesson not found in this course.');
+    if (!lesson)
+      throw new NotFoundException('Lesson not found in this course.');
     return lesson.id;
   }
 

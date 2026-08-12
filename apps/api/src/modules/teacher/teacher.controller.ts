@@ -55,7 +55,10 @@ export class TeacherController {
     @CurrentUser() user: AuthenticatedUser,
     @Query('studentId') studentId?: string,
   ) {
-    return this.teacherService.getStudents(this.scopeTeacherId(user), studentId);
+    return this.teacherService.getStudents(
+      this.scopeTeacherId(user),
+      studentId,
+    );
   }
 
   @Patch('students/:studentId/courses/:courseId/enrollment-status')
@@ -89,7 +92,11 @@ export class TeacherController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() updateCourseDto: UpdateCourseDto,
   ) {
-    return this.teacherService.updateCourse(courseId, this.scopeTeacherId(user), updateCourseDto);
+    return this.teacherService.updateCourse(
+      courseId,
+      this.scopeTeacherId(user),
+      updateCourseDto,
+    );
   }
 
   @Delete('courses/:courseId')
@@ -110,7 +117,11 @@ export class TeacherController {
     @Body() dto: CreateSectionDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.teacherService.createSection(courseId, this.scopeTeacherId(user), dto);
+    return this.teacherService.createSection(
+      courseId,
+      this.scopeTeacherId(user),
+      dto,
+    );
   }
 
   @Get('sections/:sectionId')
@@ -127,7 +138,11 @@ export class TeacherController {
     @Body() dto: UpdateSectionDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.teacherService.updateSection(sectionId, this.scopeTeacherId(user), dto);
+    return this.teacherService.updateSection(
+      sectionId,
+      this.scopeTeacherId(user),
+      dto,
+    );
   }
 
   @Delete('sections/:sectionId')
@@ -136,7 +151,10 @@ export class TeacherController {
     @Param('sectionId') sectionId: string,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    await this.teacherService.deleteSection(sectionId, this.scopeTeacherId(user));
+    await this.teacherService.deleteSection(
+      sectionId,
+      this.scopeTeacherId(user),
+    );
   }
 
   @Patch('courses/:courseId/sections/reorder')
@@ -145,7 +163,11 @@ export class TeacherController {
     @Body() dto: ReorderDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    await this.teacherService.reorderSections(courseId, this.scopeTeacherId(user), dto);
+    await this.teacherService.reorderSections(
+      courseId,
+      this.scopeTeacherId(user),
+      dto,
+    );
   }
 
   // ── Lessons ──
@@ -157,7 +179,11 @@ export class TeacherController {
     @Body() dto: CreateLessonDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.teacherService.createLesson(sectionId, this.scopeTeacherId(user), dto);
+    return this.teacherService.createLesson(
+      sectionId,
+      this.scopeTeacherId(user),
+      dto,
+    );
   }
 
   @Get('lessons/:lessonId')
@@ -173,7 +199,10 @@ export class TeacherController {
     @Param('lessonId') lessonId: string,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.teacherService.getLessonPlayer(lessonId, this.scopeTeacherId(user));
+    return this.teacherService.getLessonPlayer(
+      lessonId,
+      this.scopeTeacherId(user),
+    );
   }
 
   @Patch('lessons/:lessonId')
@@ -182,7 +211,11 @@ export class TeacherController {
     @Body() dto: UpdateLessonDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.teacherService.updateLesson(lessonId, this.scopeTeacherId(user), dto);
+    return this.teacherService.updateLesson(
+      lessonId,
+      this.scopeTeacherId(user),
+      dto,
+    );
   }
 
   @Delete('lessons/:lessonId')
@@ -200,6 +233,10 @@ export class TeacherController {
     @Body() dto: ReorderDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    await this.teacherService.reorderLessons(sectionId, this.scopeTeacherId(user), dto);
+    await this.teacherService.reorderLessons(
+      sectionId,
+      this.scopeTeacherId(user),
+      dto,
+    );
   }
 }

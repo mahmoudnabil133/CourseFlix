@@ -93,7 +93,9 @@ export class AnalyticsParserService {
     let intent: AnalyticsIntent = 'unsupported';
     if (this.introKeywords.some((k) => normalized.includes(k.toLowerCase())))
       intent = 'assistant_intro';
-    else if (this.activeInterventionKeywords.some((k) => normalized.includes(k)))
+    else if (
+      this.activeInterventionKeywords.some((k) => normalized.includes(k))
+    )
       intent = 'active_interventions';
     else if (this.revenueKeywords.some((k) => normalized.includes(k)))
       intent = 'revenue';

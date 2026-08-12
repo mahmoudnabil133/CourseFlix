@@ -90,12 +90,14 @@ const SAMPLE_TRANSCRIPTS: Record<
 // restart, since setup_database() reseeds on every run.
 const SEED_VIDEO_URLS = new Set(VIDEO_SOURCES.map((source) => source.url));
 
-export async function seedVideoTranscripts(dataSource: DataSource): Promise<number> {
-  const videos = (await dataSource.query(
+export async function seedVideoTranscripts(
+  dataSource: DataSource,
+): Promise<number> {
+  const videos = await dataSource.query(
     `SELECT id, course_id, section_id, lesson_id, title, video_url FROM videos
       WHERE video_url = ANY($1::text[])`,
     [Array.from(SEED_VIDEO_URLS)],
-  )) as Array<VideoRow & { video_url: string }>;
+  );
 
   if (videos.length === 0) {
     console.log('No videos found for transcript seeding.');
@@ -124,23 +126,23 @@ export async function seedVideoTranscripts(dataSource: DataSource): Promise<numb
   for (const video of videos) {
     try {
       // Check or upsert transcript row
-      const existingTranscripts = (await dataSource.query(
+      const existingTranscripts = await dataSource.query(
         `SELECT id FROM video_transcripts WHERE video_id = $1`,
         [video.id],
-      )) as Array<{ id: string }>;
+      );
 
       let transcriptId: string;
 
       if (existingTranscripts.length > 0) {
         transcriptId = existingTranscripts[0].id;
       } else {
-        const inserted = (await dataSource.query(
+        const inserted = await dataSource.query(
           `INSERT INTO video_transcripts (
             video_id, course_id, section_id, lesson_id, provider, processing_status, version
           ) VALUES ($1, $2, $3, $4, 'local', 'completed', 1)
           RETURNING id`,
           [video.id, video.course_id, video.section_id, video.lesson_id],
-        )) as Array<{ id: string }>;
+        );
         transcriptId = inserted[0].id;
       }
 
