@@ -201,9 +201,17 @@ export class UsersService {
     }
 
     if (dto.notificationPreferences !== undefined) {
-      for (const [type, enabled] of Object.entries(dto.notificationPreferences)) {
-        if (!KNOWN_NOTIFICATION_TYPES.includes(type as (typeof KNOWN_NOTIFICATION_TYPES)[number])) {
-          throw new BadRequestException(`Unknown notification type: "${type}".`);
+      for (const [type, enabled] of Object.entries(
+        dto.notificationPreferences,
+      )) {
+        if (
+          !KNOWN_NOTIFICATION_TYPES.includes(
+            type as (typeof KNOWN_NOTIFICATION_TYPES)[number],
+          )
+        ) {
+          throw new BadRequestException(
+            `Unknown notification type: "${type}".`,
+          );
         }
         if (typeof enabled !== 'boolean') {
           throw new BadRequestException(

@@ -219,17 +219,19 @@ describe('RetrievalService (Isolation Proof)', () => {
     }
 
     it('proves video isolation: queries transcript A and joins video_chunks, never courseId', async () => {
-      mockCollection.query.mockImplementation((options: MockVideoQueryOptions) => {
-        expect(options.where).toEqual({
-          $and: [{ videoTranscriptId: transcriptA }, { isActive: true }],
-        });
+      mockCollection.query.mockImplementation(
+        (options: MockVideoQueryOptions) => {
+          expect(options.where).toEqual({
+            $and: [{ videoTranscriptId: transcriptA }, { isActive: true }],
+          });
 
-        return Promise.resolve({
-          ids: [[`video:${transcriptA}:1:0`]],
-          distances: [[0.05]],
-          documents: [['في الدقيقة الثالثة يشرح المحاضر قانون نيوتن الثالث']],
-        });
-      });
+          return Promise.resolve({
+            ids: [[`video:${transcriptA}:1:0`]],
+            distances: [[0.05]],
+            documents: [['في الدقيقة الثالثة يشرح المحاضر قانون نيوتن الثالث']],
+          });
+        },
+      );
 
       dataSource.query.mockResolvedValue([
         {
@@ -258,9 +260,7 @@ describe('RetrievalService (Isolation Proof)', () => {
       const calls = mockCollection.query.mock.calls as unknown as Array<
         [MockVideoQueryOptions]
       >;
-      expect(calls[0][0].where.$and[0].videoTranscriptId).not.toBe(
-        transcriptB,
-      );
+      expect(calls[0][0].where.$and[0].videoTranscriptId).not.toBe(transcriptB);
       expect(results.some((r) => r.videoTranscriptId === transcriptB)).toBe(
         false,
       );

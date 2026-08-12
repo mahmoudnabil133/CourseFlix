@@ -259,7 +259,7 @@ describe('Sales (e2e)', () => {
     expect(summary.currency).toBe('EGP');
   });
 
-  it('never includes another owner\'s course in the summary', async () => {
+  it("never includes another owner's course in the summary", async () => {
     const agentA = request.agent(app.getHttpServer());
     await loginTeacher(agentA);
 

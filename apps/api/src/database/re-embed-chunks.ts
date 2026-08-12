@@ -36,19 +36,21 @@ export async function reEmbedDocumentChunks(): Promise<number> {
       },
     });
 
-    const chunks = (await AppDataSource.query(
+    const chunks = await AppDataSource.query(
       `SELECT c.id, c.vector_id, c.document_id, c.page_number, c.text_preview, d.course_id
          FROM document_chunks c
          JOIN documents d ON c.document_id = d.id
         WHERE c.is_active = true`,
-    )) as DocumentChunkRow[];
+    );
 
     if (chunks.length === 0) {
       console.log('No active document chunks found to re-embed.');
       return 0;
     }
 
-    console.log(`Re-embedding ${chunks.length} document chunks using OpenAI embeddings...`);
+    console.log(
+      `Re-embedding ${chunks.length} document chunks using OpenAI embeddings...`,
+    );
 
     const BATCH_SIZE = 20;
     let processed = 0;
@@ -80,7 +82,9 @@ export async function reEmbedDocumentChunks(): Promise<number> {
       console.log(`Processed ${processed}/${chunks.length} chunks...`);
     }
 
-    console.log(`Successfully re-embedded ${processed} document chunks in ChromaDB.`);
+    console.log(
+      `Successfully re-embedded ${processed} document chunks in ChromaDB.`,
+    );
     return processed;
   } finally {
     if (!isInitialized && AppDataSource.isInitialized) {

@@ -79,8 +79,8 @@ export class DocumentsService {
     private readonly storageAdapter: StorageAdapter,
     @Inject(JOB_QUEUE_PORT)
     private readonly jobQueue: JobQueuePort,
-    private readonly enrollmentsService: EnrollmentsService
-  ) { }
+    private readonly enrollmentsService: EnrollmentsService,
+  ) {}
 
   /**
    * Validation runs before a single byte is stored, in the order fixed
@@ -129,26 +129,26 @@ export class DocumentsService {
 
     const document = existing
       ? await this.documentsRepository.save({
-        ...existing,
-        fileId: file.id,
-        version: existing.version + 1,
-        processingStatus: 'pending' as const,
-        errorMessage: null,
-      })
-      : await this.documentsRepository.save(
-        this.documentsRepository.create({
-          courseId,
-          sectionId,
-          lessonId,
-          uploadedBy: teacherId,
+          ...existing,
           fileId: file.id,
-          fileName: originalName,
-          fileType: 'pdf',
-          processingStatus: 'pending',
-          checksum,
-          version: 1,
-        }),
-      );
+          version: existing.version + 1,
+          processingStatus: 'pending' as const,
+          errorMessage: null,
+        })
+      : await this.documentsRepository.save(
+          this.documentsRepository.create({
+            courseId,
+            sectionId,
+            lessonId,
+            uploadedBy: teacherId,
+            fileId: file.id,
+            fileName: originalName,
+            fileType: 'pdf',
+            processingStatus: 'pending',
+            checksum,
+            version: 1,
+          }),
+        );
 
     await this.jobQueue.enqueueDocumentIngestion(document.id, document.version);
 

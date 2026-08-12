@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return, @typescript-eslint/require-await, @typescript-eslint/unbound-method */
+/* eslint-disable @typescript-eslint/unbound-method */
 import {
   BadRequestException,
   ForbiddenException,
@@ -118,7 +118,11 @@ describe('VideoQaService', () => {
 
   it('rejects empty questions', async () => {
     await expect(
-      service.ask({ videoId: 'video-1', studentId: 'student-1', question: '   ' }),
+      service.ask({
+        videoId: 'video-1',
+        studentId: 'student-1',
+        question: '   ',
+      }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 

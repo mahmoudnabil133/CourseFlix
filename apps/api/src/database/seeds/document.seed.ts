@@ -138,7 +138,11 @@ export async function seedDocuments(
 
     // Seed document_chunks for completed documents so Tutor has grounded physics knowledge
     if (blueprint.status === 'completed') {
-      await seedDocumentChunksForDoc(dataSource, savedDoc.id, blueprint.fileName);
+      await seedDocumentChunksForDoc(
+        dataSource,
+        savedDoc.id,
+        blueprint.fileName,
+      );
     }
   }
 
@@ -168,7 +172,10 @@ async function seedDocumentChunksForDoc(
     return;
   }
 
-  const sampleChunksMap: Record<string, Array<{ page: number; text: string }>> = {
+  const sampleChunksMap: Record<
+    string,
+    Array<{ page: number; text: string }>
+  > = {
     'ملخص-قوانين-نيوتن.pdf': [
       {
         page: 1,
@@ -226,4 +233,3 @@ async function seedDocumentChunksForDoc(
     );
   }
 }
-

@@ -9,9 +9,7 @@ import type {
 } from './analytics-intent-handler.interface';
 
 @Injectable()
-export class ActiveInterventionsIntentHandler
-  implements AnalyticsIntentHandler
-{
+export class ActiveInterventionsIntentHandler implements AnalyticsIntentHandler {
   readonly name = 'active_interventions';
 
   constructor(
@@ -22,7 +20,7 @@ export class ActiveInterventionsIntentHandler
   async handle(
     context: AnalyticsIntentContext,
   ): Promise<AnalyticsIntentResult> {
-    const row = (await this.interventionsRepository
+    const row = await this.interventionsRepository
       .createQueryBuilder('intervention')
       .select('COUNT(intervention.id)', 'activeInterventionCount')
       .addSelect(
@@ -33,9 +31,7 @@ export class ActiveInterventionsIntentHandler
         teacherId: context.teacherId,
       })
       .andWhere('intervention.status = :status', { status: 'active' })
-      .getRawOne()) as
-      | { activeInterventionCount?: string; affectedStudentCount?: string }
-      | undefined;
+      .getRawOne();
 
     return {
       intent: this.name,

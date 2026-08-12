@@ -20,7 +20,7 @@ export class CourseCountIntentHandler implements AnalyticsIntentHandler {
   async handle(
     context: AnalyticsIntentContext,
   ): Promise<AnalyticsIntentResult> {
-    const rows = (await this.coursesRepository
+    const rows = await this.coursesRepository
       .createQueryBuilder('course')
       .select('course.status', 'status')
       .addSelect('COUNT(course.id)', 'count')
@@ -29,7 +29,7 @@ export class CourseCountIntentHandler implements AnalyticsIntentHandler {
       })
       .andWhere('course.deleted_at IS NULL')
       .groupBy('course.status')
-      .getRawMany()) as Array<{ status: string; count: string }>;
+      .getRawMany();
 
     const counts = new Map(rows.map((row) => [row.status, Number(row.count)]));
     const publishedCourses = counts.get('published') ?? 0;

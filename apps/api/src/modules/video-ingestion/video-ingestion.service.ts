@@ -14,7 +14,9 @@ import {
  * has no captions to fetch, so it's routed to `local`, which the worker
  * transcribes via Whisper instead. Only an unparseable URL is skipped.
  */
-function detectCaptionProvider(videoUrl: string): VideoTranscriptProvider | null {
+function detectCaptionProvider(
+  videoUrl: string,
+): VideoTranscriptProvider | null {
   let hostname: string;
   try {
     hostname = new URL(videoUrl).hostname.replace(/^www\./, '').toLowerCase();
@@ -25,7 +27,9 @@ function detectCaptionProvider(videoUrl: string): VideoTranscriptProvider | null
   if (['youtube.com', 'youtu.be', 'm.youtube.com'].includes(hostname)) {
     return 'youtube';
   }
-  if (['iframe.mediadelivery.net', 'player.mediadelivery.net'].includes(hostname)) {
+  if (
+    ['iframe.mediadelivery.net', 'player.mediadelivery.net'].includes(hostname)
+  ) {
     return 'bunny';
   }
   return 'local';

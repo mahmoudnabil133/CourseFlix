@@ -31,7 +31,11 @@ describe('DocumentsService', () => {
     create: jest.Mock;
     save: jest.Mock;
   };
-  let filesRepository: { create: jest.Mock; save: jest.Mock; findOne: jest.Mock };
+  let filesRepository: {
+    create: jest.Mock;
+    save: jest.Mock;
+    findOne: jest.Mock;
+  };
   let coursesRepository: { findOne: jest.Mock };
   let sectionsRepository: { findOne: jest.Mock };
   let lessonsRepository: { findOne: jest.Mock };
@@ -216,7 +220,8 @@ describe('DocumentsService', () => {
       documentsRepository.findOne.mockResolvedValue(null);
 
       await documentsService.uploadDocument(courseId, teacherId, {
-        originalName: 'Ø§Ù\x84Ù\x83Ù\x87Ø±Ù\x88Ù\x85ØºÙ\x86Ø§Ø·Ù\x8AØ³Ù\x8AØ©.pdf',
+        originalName:
+          'Ø§Ù\x84Ù\x83Ù\x87Ø±Ù\x88Ù\x85ØºÙ\x86Ø§Ø·Ù\x8AØ³Ù\x8AØ©.pdf',
         mimeType: 'application/pdf',
         buffer: PDF_BUFFER,
         sizeBytes: PDF_BUFFER.length,

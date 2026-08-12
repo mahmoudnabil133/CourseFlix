@@ -7,7 +7,8 @@ import {
 } from 'typeorm';
 
 export type VideoTranscriptProvider = 'bunny' | 'youtube' | 'local';
-export type VideoTranscriptStatus = 'pending' | 'processing' | 'completed' | 'failed';
+export type VideoTranscriptStatus =
+  'pending' | 'processing' | 'completed' | 'failed';
 
 /**
  * Mirrors `documents` for video content — one row per video, tracking

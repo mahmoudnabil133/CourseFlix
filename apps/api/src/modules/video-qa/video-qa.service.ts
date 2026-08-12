@@ -47,8 +47,7 @@ export interface VideoQaStatusResponse {
   status: VideoTranscriptStatus | 'not_available';
 }
 
-const NOT_READY_MESSAGE =
-  'نص هذا الفيديو لسه بيتجهز، جرب تسأل تاني بعد شوية.';
+const NOT_READY_MESSAGE = 'نص هذا الفيديو لسه بيتجهز، جرب تسأل تاني بعد شوية.';
 const NO_ANSWER_MESSAGE = 'محتوى هذا الفيديو لا يغطي هذا السؤال.';
 
 @Injectable()

@@ -495,7 +495,8 @@ export class QuizzesService {
     quizId: string,
     quizTitle: string,
   ): Promise<void> {
-    const studentIds = await this.enrollmentsService.listActiveStudentIds(courseId);
+    const studentIds =
+      await this.enrollmentsService.listActiveStudentIds(courseId);
     await Promise.all(
       studentIds.map((studentId) =>
         this.notificationProducer.notify({
